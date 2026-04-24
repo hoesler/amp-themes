@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "check": "pi --no-extensions --no-themes -e . --theme ./themes -p 'Reply with ok'",
+    "check": "pi --no-extensions --no-themes -e . -p 'Reply with ok'",
     "pack:check": "npm pack --dry-run",
     "release:check": "npm run typecheck && npm run check && npm run pack:check"
   },
