@@ -191,7 +191,27 @@ class AmpEditor extends CustomEditor {
     const thinkingLevel = this.getThinkingLevel();
     const thinkingWidth = visibleWidth(thinkingLevel);
     const modelWidth = Math.max(1, maxWidth - thinkingWidth - 3);
-    return ` ${compactModelId(modelId, modelWidth)} · ${thinkingLevel} `;
+    const model = this.fg("text", compactModelId(modelId, modelWidth));
+    const thinking = this.fg(this.getThinkingColor(), thinkingLevel);
+    return ` ${model} ${this.fg("dim", "·")} ${thinking} `;
+  }
+
+  private getThinkingColor(): ThemeColor {
+    switch (this.getThinkingLevel()) {
+      case "minimal":
+        return "thinkingMinimal";
+      case "low":
+        return "thinkingLow";
+      case "medium":
+        return "thinkingMedium";
+      case "high":
+        return "thinkingHigh";
+      case "xhigh":
+        return "thinkingXhigh";
+      case "off":
+      default:
+        return "thinkingOff";
+    }
   }
 
   private getCwdLabel(): string {
@@ -209,7 +229,7 @@ class AmpEditor extends CustomEditor {
   private wrapBody(line: string, innerWidth: number): string {
     const clipped = truncateToWidth(line, innerWidth, "");
     const padding = " ".repeat(Math.max(0, innerWidth - visibleWidth(clipped)));
-    return this.fg("borderMuted", "│") + clipped + padding + this.fg("borderMuted", "│");
+    return this.sideBorder() + clipped + padding + this.sideBorder();
   }
 
   private wrapPopupBlock(lines: string[], width: number): string[] {
@@ -227,17 +247,23 @@ class AmpEditor extends CustomEditor {
     const maxLeft = Math.max(0, Math.floor(innerWidth * 0.44));
     const maxRight = Math.max(0, innerWidth - maxLeft - 2);
     const left = this.fg("muted", truncateToWidth(leftLabel, maxLeft, "…"));
-    const right = this.fg("thinkingText", truncateToWidth(rightLabel, maxRight, "…"));
+    const right = truncateToWidth(rightLabel, maxRight, "…");
     const used = visibleWidth(left) + visibleWidth(right);
     const fill = Math.max(0, innerWidth - used);
-    return this.fg("borderMuted", "╭") + left + this.fg("border", "─".repeat(fill)) + right + this.fg("borderMuted", "╮");
+    const borderColor = this.getThinkingColor();
+    return this.fg(borderColor, "╭") + left + this.fg(borderColor, "─".repeat(fill)) + right + this.fg(borderColor, "╮");
+  }
+
+  private sideBorder(): string {
+    return this.fg(this.getThinkingColor(), "│");
   }
 
   private borderWithRightLabel(width: number, label: string): string {
     const innerWidth = Math.max(0, width - 2);
     const right = this.fg("muted", truncateToWidth(label, Math.max(0, innerWidth - 2), "…"));
     const fill = Math.max(0, innerWidth - visibleWidth(right));
-    return this.fg("borderMuted", "╰") + this.fg("borderMuted", "─".repeat(fill)) + right + this.fg("borderMuted", "╯");
+    const borderColor = this.getThinkingColor();
+    return this.fg(borderColor, "╰") + this.fg(borderColor, "─".repeat(fill)) + right + this.fg(borderColor, "╯");
   }
 }
 
