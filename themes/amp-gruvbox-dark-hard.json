@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
-  "name": "amp-agent",
+  "name": "amp-gruvbox-dark-hard",
   "vars": {
     "amp-bg": "#202222",
     "amp-bg-deep": "#1b1d1d",

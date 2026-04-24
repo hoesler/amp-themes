@@ -4,7 +4,7 @@
 
 Initial release.
 
-- Add `amp-agent` Pi theme.
+- Add `amp-gruvbox-dark-hard` Pi theme.
 - Add Amp-inspired custom editor chrome.
 - Show context usage and real session cost from Pi session usage data.
 - Show model id and `pi.getThinkingLevel()` in the editor border.

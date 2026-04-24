@@ -4,7 +4,7 @@ Amp-inspired UI suite for [Pi](https://pi.dev): a dark theme, custom editor chro
 
 ## What it includes
 
-- `themes/amp-agent.json` — dark Amp-style Pi theme.
+- `themes/amp-gruvbox-dark-hard.json` — dark Amp-style Pi theme.
 - `extensions/amp-editor.ts` — rounded bottom editor chrome with context usage, real session cost, model id, thinking level, cwd, and git branch.
 - Amp-style static working indicator and `Working...` message.
 - `pi-tool-display` — compact tool rendering loaded from this package so users get a complete UI setup with one install.
@@ -21,7 +21,7 @@ Then select the theme in Pi settings, or set this in `~/.pi/agent/settings.json`
 
 ```json
 {
-  "theme": "amp-agent"
+  "theme": "amp-gruvbox-dark-hard"
 }
 ```
 
@@ -106,7 +106,7 @@ amp-themes/
   extensions/
     amp-editor.ts
   themes/
-    amp-agent.json
+    amp-gruvbox-dark-hard.json
 ```
 
 ## Release checklist
