@@ -23,9 +23,9 @@
   },
   "colors": {
     "accent": "amp-accent",
-    "border": "amp-border",
-    "borderAccent": "amp-accent",
-    "borderMuted": "amp-border-soft",
+    "border": "amp-accent",
+    "borderAccent": "amp-accent-strong",
+    "borderMuted": "amp-border",
     "success": "amp-accent",
     "error": "amp-red",
     "warning": "amp-orange",

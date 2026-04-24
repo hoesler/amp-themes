@@ -1,4 +1,4 @@
-import { CustomEditor, type ExtensionAPI, type ExtensionContext, type ThemeColor } from "@mariozechner/pi-coding-agent";
+import { buildSessionContext, CustomEditor, type ExtensionAPI, type ExtensionContext, type ThemeColor } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
@@ -6,11 +6,13 @@ import { relative } from "node:path";
 
 const MIN_BODY_LINES = 2;
 const GIT_CACHE_MS = 2000;
+const STATUS_RIGHT_INSET = 1;
 
 type GitInfo = {
   branch: string | null;
   changedFiles: number;
   added: number;
+  modified: number;
   removed: number;
 };
 
@@ -19,6 +21,8 @@ type UsageCost = {
   hasCost: boolean;
   usingSubscription: boolean;
 };
+
+type SessionManagerLike = Pick<ExtensionContext["sessionManager"], "getEntries" | "getLeafId">;
 
 let gitCache: { cwd: string; at: number; info: GitInfo } | undefined;
 
@@ -54,7 +58,8 @@ function getGitInfo(cwd: string): GitInfo {
     if (Number.isFinite(rem)) removed += rem;
   }
 
-  const info = { branch, changedFiles, added, removed };
+  const modified = Math.min(added, removed);
+  const info = { branch, changedFiles, added: added - modified, modified, removed: removed - modified };
   gitCache = { cwd, at: now, info };
   return info;
 }
@@ -137,6 +142,10 @@ function getSessionCost(ctx: ExtensionContext): UsageCost {
   return { total, hasCost, usingSubscription };
 }
 
+function getThinkingLevel(sessionManager: SessionManagerLike): string {
+  return buildSessionContext(sessionManager.getEntries(), sessionManager.getLeafId()).thinkingLevel || "off";
+}
+
 class AmpEditor extends CustomEditor {
   constructor(
     tui: any,
@@ -163,11 +172,13 @@ class AmpEditor extends CustomEditor {
     const leftTop = this.getUsageLabel();
     const rightTop = this.getModelLabel(Math.max(8, Math.floor(innerWidth * 0.48)));
     const cwdLabel = this.getCwdLabel();
+    const gitChangesLabel = this.getGitChangesLabel();
 
     return [
       this.borderWithLabels(width, leftTop, rightTop),
       ...body.map((line) => this.wrapBody(line, innerWidth)),
       this.borderWithRightLabel(width, cwdLabel),
+      ...this.statusRows(width, gitChangesLabel),
       ...this.wrapPopupBlock(popupLines, width),
     ];
   }
@@ -216,10 +227,18 @@ class AmpEditor extends CustomEditor {
 
   private getCwdLabel(): string {
     const git = getGitInfo(this.ctx.cwd);
-    const gitLabel = git.changedFiles > 0
-      ? ` · ${git.changedFiles} ${git.changedFiles === 1 ? "file" : "files"} changed +${git.added} -${git.removed}`
-      : "";
-    return ` ${compactPath(this.ctx.cwd)}${git.branch ? ` (${git.branch})` : ""}${gitLabel} `;
+    return ` ${compactPath(this.ctx.cwd)}${git.branch ? ` (${git.branch})` : ""} `;
+  }
+
+  private getGitChangesLabel(): string {
+    const git = getGitInfo(this.ctx.cwd);
+    if (git.changedFiles === 0) return "";
+
+    const fileLabel = this.fg("muted", `${git.changedFiles} ${git.changedFiles === 1 ? "file" : "files"} changed`);
+    const added = git.added > 0 ? ` ${this.fg("toolDiffAdded", `+${git.added}`)}` : "";
+    const modified = git.modified > 0 ? ` ${this.fg("warning", `~${git.modified}`)}` : "";
+    const removed = git.removed > 0 ? ` ${this.fg("toolDiffRemoved", `-${git.removed}`)}` : "";
+    return `${fileLabel}${added}${modified}${removed}`;
   }
 
   private fg(color: ThemeColor, text: string): string {
@@ -240,6 +259,16 @@ class AmpEditor extends CustomEditor {
       const padding = " ".repeat(Math.max(0, width - visibleWidth(clipped)));
       return clipped + padding;
     });
+  }
+
+  private statusRows(width: number, gitChangesLabel: string): string[] {
+    if (!gitChangesLabel) return [];
+
+    const contentWidth = Math.max(1, width - STATUS_RIGHT_INSET);
+    const clipped = truncateToWidth(gitChangesLabel, contentWidth, "…");
+    const leftPadding = " ".repeat(Math.max(0, contentWidth - visibleWidth(clipped)));
+    const rightPadding = " ".repeat(Math.min(STATUS_RIGHT_INSET, Math.max(0, width - contentWidth)));
+    return [`${leftPadding}${clipped}${rightPadding}`];
   }
 
   private borderWithLabels(width: number, leftLabel: string, rightLabel: string): string {
@@ -273,7 +302,7 @@ export default function (pi: ExtensionAPI) {
 
     ctx.ui.setEditorComponent((tui, theme, keybindings) =>
       new AmpEditor(tui, theme, keybindings, ctx, () =>
-        typeof pi.getThinkingLevel === "function" ? pi.getThinkingLevel() : "off",
+        getThinkingLevel(ctx.sessionManager),
       ),
     );
 

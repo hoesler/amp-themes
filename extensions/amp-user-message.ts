@@ -1,0 +1,136 @@
+import {
+  buildSessionContext,
+  getMarkdownTheme,
+  UserMessageComponent,
+  type ExtensionAPI,
+  type ExtensionContext,
+  type ThemeColor,
+} from "@mariozechner/pi-coding-agent";
+import { Markdown, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+
+type RenderFn = (width: number) => string[];
+type PatchableUserMessagePrototype = {
+  render: RenderFn;
+  children?: unknown[];
+  __ampUserMessageOriginalRender?: RenderFn;
+  __ampUserMessagePatched?: boolean;
+};
+
+type MarkdownLike = {
+  text?: unknown;
+};
+
+type ThemeLike = {
+  fg(color: ThemeColor, text: string): string;
+  italic?(text: string): string;
+};
+
+type SessionManagerLike = Pick<ExtensionContext["sessionManager"], "getEntries" | "getLeafId">;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function findMarkdownText(value: unknown): string | undefined {
+  if (isRecord(value) && typeof (value as MarkdownLike).text === "string") {
+    return (value as { text: string }).text;
+  }
+
+  if (!isRecord(value)) return undefined;
+
+  const children = Array.isArray(value.children) ? value.children : [];
+  for (const child of children) {
+    const text = findMarkdownText(child);
+    if (text !== undefined) return text;
+  }
+
+  return undefined;
+}
+
+function getThinkingColor(level: string): ThemeColor {
+  switch (level) {
+    case "minimal":
+      return "thinkingMinimal";
+    case "low":
+      return "thinkingLow";
+    case "medium":
+      return "thinkingMedium";
+    case "high":
+      return "thinkingHigh";
+    case "xhigh":
+      return "thinkingXhigh";
+    case "off":
+    default:
+      return "thinkingOff";
+  }
+}
+
+function getThinkingLevelFromSession(sessionManager: SessionManagerLike): string {
+  return buildSessionContext(sessionManager.getEntries(), sessionManager.getLeafId()).thinkingLevel || "off";
+}
+
+function styledUserLine(line: string, width: number, theme: ThemeLike | undefined, color: ThemeColor): string {
+  const prefix = theme ? theme.fg(color, "▌") : "▌";
+  const contentWidth = Math.max(1, width - visibleWidth(prefix));
+  const clipped = truncateToWidth(line, contentWidth, "");
+  const text = theme ? theme.fg("userMessageText", theme.italic ? theme.italic(clipped) : clipped) : clipped;
+  const padding = " ".repeat(Math.max(0, contentWidth - visibleWidth(clipped)));
+  return `${prefix}${text}${padding}`;
+}
+
+function renderAmpUserMessage(
+  instance: PatchableUserMessagePrototype,
+  width: number,
+  theme: ThemeLike | undefined,
+  color: ThemeColor,
+): string[] | undefined {
+  const text = findMarkdownText(instance);
+  if (text === undefined) return undefined;
+
+  const prefixWidth = 3;
+  const contentWidth = Math.max(1, width - prefixWidth);
+  const renderer = new Markdown(text, 0, 0, getMarkdownTheme());
+  const lines = renderer.render(contentWidth);
+  const body = lines.length > 0 ? lines : [""];
+
+  return [
+    "",
+    ...body.map((line) => styledUserLine(line, width, theme, color)),
+  ];
+}
+
+function patchUserMessageRender(getTheme: () => ThemeLike | undefined, getThinkingLevel: () => string): void {
+  const prototype = UserMessageComponent.prototype as unknown as PatchableUserMessagePrototype;
+  if (prototype.__ampUserMessagePatched) return;
+
+  prototype.__ampUserMessageOriginalRender = prototype.render;
+  prototype.render = function renderWithAmpUserMessage(width: number): string[] {
+    const original = prototype.__ampUserMessageOriginalRender ?? prototype.render;
+    const theme = getTheme();
+    const color = getThinkingColor(getThinkingLevel());
+    const ampLines = renderAmpUserMessage(this as PatchableUserMessagePrototype, width, theme, color);
+    return ampLines ?? original.call(this, width);
+  };
+  prototype.__ampUserMessagePatched = true;
+}
+
+export default function (pi: ExtensionAPI) {
+  let activeTheme: ThemeLike | undefined;
+  let getActiveThinkingLevel = () => "off";
+
+  const getTheme = () => activeTheme;
+  const getThinkingLevel = () => getActiveThinkingLevel();
+
+  patchUserMessageRender(getTheme, getThinkingLevel);
+
+  pi.on("session_start", (_event, ctx) => {
+    if (!ctx.hasUI) return;
+    activeTheme = ctx.ui.theme;
+    getActiveThinkingLevel = () => getThinkingLevelFromSession(ctx.sessionManager);
+    patchUserMessageRender(getTheme, getThinkingLevel);
+  });
+
+  pi.on("before_agent_start", () => {
+    patchUserMessageRender(getTheme, getThinkingLevel);
+  });
+}

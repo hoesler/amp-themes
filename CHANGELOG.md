@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3
+
+- Move git change summary out of the editor border and right-align it below the editor.
+- Split git change summary into added, modified, and removed counts with theme-aware colors.
+- Keep the editor bottom border focused on cwd and branch only.
+- Tighten Amp-style user message rendering by removing the gap after the leading bar.
+
 ## 0.1.0
 
 Initial release.

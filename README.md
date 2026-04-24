@@ -5,7 +5,8 @@ Amp-inspired UI suite for [Pi](https://pi.dev): a dark theme, custom editor chro
 ## What it includes
 
 - `themes/amp-gruvbox-dark-hard.json` — dark Amp-style Pi theme.
-- `extensions/amp-editor.ts` — rounded bottom editor chrome with context usage, real session cost, model id, thinking level, cwd, and git branch.
+- `extensions/amp-editor.ts` — rounded bottom editor chrome with context usage, real session cost, model id, thinking level, cwd, git branch, and an external git change summary.
+- `extensions/amp-user-message.ts` — compact Amp-style user message rendering with a leading status bar.
 - Amp-style static working indicator and `Working...` message.
 - `pi-tool-display` — compact tool rendering loaded from this package so users get a complete UI setup with one install.
 
@@ -65,11 +66,19 @@ Top right:
 <model id> · <pi.getThinkingLevel()>
 ```
 
-Bottom right:
+Bottom right border:
 
 ```text
 <cwd> (<git branch>)
 ```
+
+Below the editor, right-aligned when the repo has changes:
+
+```text
+<files changed> files changed +<added> ~<modified> -<removed>
+```
+
+The diff counts use the active theme's `toolDiffAdded`, `warning`, and `toolDiffRemoved` colors.
 
 The editor keeps a 2-line minimum body when empty, then grows with multi-line input using Pi's native editor behavior.
 
@@ -105,6 +114,7 @@ amp-themes/
   README.md
   extensions/
     amp-editor.ts
+    amp-user-message.ts
   themes/
     amp-gruvbox-dark-hard.json
 ```
