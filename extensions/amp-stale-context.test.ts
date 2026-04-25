@@ -421,6 +421,42 @@ test("amp editor uses runtime thinking level after resume when session has no th
   expect(editor.render(80).join("\n")).toMatch(/ high /);
 });
 
+test("amp user message follows runtime thinking level changes after session start", () => {
+  resetUserMessagePatch();
+
+  let thinkingLevel = "off";
+  const { pi, handlers } = createPiStub(() => thinkingLevel);
+
+  ampUserMessageExtension(pi);
+
+  const sessionStart = expectDefined(handlers.get("session_start"), "session_start handler should be registered");
+
+  sessionStart(
+    { type: "session_start", reason: "startup" },
+    {
+      hasUI: true,
+      sessionManager: createSessionManagerWithoutThinking(),
+      ui: {
+        theme: {
+          fg(color: string, text: string) {
+            return `[${color}]${text}`;
+          },
+          italic(text: string) {
+            return text;
+          },
+        },
+      },
+    } as unknown as ExtensionContext,
+  );
+
+  thinkingLevel = "medium";
+
+  const message = new UserMessageComponent("hello from amp");
+  expect(message.render(48).join("\n")).toMatch(/\[thinkingMedium\]▌/);
+
+  resetUserMessagePatch();
+});
+
 test("amp user message uses runtime thinking level after resume when session has no thinking entry", () => {
   resetUserMessagePatch();
 

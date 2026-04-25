@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.9
+
+- Keep Amp-style user message coloring in sync with runtime thinking-level changes.
+
 ## 0.2.8
 
 - Add `amp-dark` and `amp-light` themes based on Amp's dark/light palette.
