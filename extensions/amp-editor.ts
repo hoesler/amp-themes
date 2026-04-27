@@ -1,5 +1,6 @@
 import { buildSessionContext, CustomEditor, type ExtensionAPI, type ExtensionContext, type ThemeColor } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { BUILTIN_COMMAND_PALETTE_ITEMS, CommandPaletteOverlay, type CommandPaletteItem, type CommandPaletteResult, stripAnsi } from "./amp-command-palette.js";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { relative } from "node:path";
@@ -99,10 +100,6 @@ function compactPath(cwd: string): string {
   return cwd;
 }
 
-function stripAnsi(text: string): string {
-  return text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
-}
-
 function isEditorRule(line: string): boolean {
   const plain = stripAnsi(line).trim();
   return plain.includes("─") && [...plain].every((char) => "─↑↓ 0123456789more".includes(char));
@@ -166,12 +163,35 @@ class AmpEditor extends CustomEditor {
     keybindings: any,
     private readonly getCtx: () => ExtensionContext,
     private readonly getThinkingLevel: () => string,
+    private readonly openCommandPalette: (initialQuery: string | undefined, onSelect: (command: string) => void) => void,
   ) {
     super(tui, theme, keybindings, { paddingX: 1 });
   }
 
   private get ctx(): ExtensionContext {
     return this.getCtx();
+  }
+
+  handleInput(data: string): void {
+    if (data === "/" && this.getText().trim() === "") {
+      this.openCommandPalette(undefined, (command) => {
+        this.submitCommand(command);
+      });
+      return;
+    }
+
+    super.handleInput(data);
+  }
+
+  private submitCommand(command: string): void {
+    this.setText(`/${command}`);
+    const submitValue = (this as unknown as { submitValue?: () => void }).submitValue;
+    if (submitValue) {
+      submitValue.call(this);
+      return;
+    }
+
+    this.onSubmit?.(`/${command}`);
   }
 
   render(width: number): string[] {
@@ -311,10 +331,55 @@ class AmpEditor extends CustomEditor {
   }
 }
 
+function getCommandPaletteItems(pi: ExtensionAPI): CommandPaletteItem[] {
+  return [
+    ...BUILTIN_COMMAND_PALETTE_ITEMS,
+    ...pi.getCommands().map((command) => ({
+      name: command.name,
+      description: command.description,
+      source: command.source,
+    })),
+  ];
+}
+
 export default function (pi: ExtensionAPI) {
   const activeToolExecutions = new Set<string>();
   let activeThinkingLevel = "off";
   let activeCtx: ExtensionContext | undefined;
+  let commandPaletteOpen = false;
+
+  const openCommandPalette = (initialQuery = "", onSelect: (command: string) => void) => {
+    const ctx = activeCtx;
+    if (!ctx?.hasUI || commandPaletteOpen) return;
+
+    commandPaletteOpen = true;
+    void ctx.ui.custom<CommandPaletteResult | null>(
+      (tui, theme, keybindings, done) => new CommandPaletteOverlay(
+        getCommandPaletteItems(pi),
+        initialQuery,
+        tui,
+        theme,
+        keybindings,
+        done,
+      ),
+      {
+        overlay: true,
+        overlayOptions: {
+          anchor: "center",
+          width: "90%",
+          minWidth: 42,
+          maxHeight: "80%",
+          margin: 1,
+        },
+      },
+    ).then((result) => {
+      commandPaletteOpen = false;
+      if (!result) return;
+      onSelect(result.command);
+    }).catch(() => {
+      commandPaletteOpen = false;
+    });
+  };
 
   pi.on("session_start", (_event, ctx) => {
     if (!ctx.hasUI) return;
@@ -327,7 +392,7 @@ export default function (pi: ExtensionAPI) {
         const currentCtx = activeCtx ?? ctx;
         activeThinkingLevel = getSafeThinkingLevel(pi, currentCtx.sessionManager);
         return activeThinkingLevel;
-      }),
+      }, openCommandPalette),
     );
 
     ctx.ui.setWorkingIndicator({

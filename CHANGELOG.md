@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.10
+
+- Add an Amp-style overlay command palette for slash commands.
+- Include built-in interactive commands alongside extension, prompt, and skill commands.
+- Support palette filtering, scrolling, paging, and clearing the query.
+
 ## 0.2.9
 
 - Keep Amp-style user message coloring in sync with runtime thinking-level changes.
