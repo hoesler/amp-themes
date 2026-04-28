@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.12
+
+- Keep Amp user message colors synchronized with editor thinking colors after extension reloads.
+- Add regression coverage for user message prototype state refresh across reloads.
+
 ## 0.2.11
 
 - Hide Pi's built-in working loader row when supported.

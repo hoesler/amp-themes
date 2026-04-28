@@ -14,6 +14,8 @@ type PatchableUserMessagePrototype = {
   children?: unknown[];
   __ampUserMessageOriginalRender?: RenderFn;
   __ampUserMessagePatched?: boolean;
+  __ampUserMessageGetTheme?: () => ThemeLike | undefined;
+  __ampUserMessageGetThinkingLevel?: () => string;
 };
 
 type MarkdownLike = {
@@ -113,13 +115,17 @@ function renderAmpUserMessage(
 
 function patchUserMessageRender(getTheme: () => ThemeLike | undefined, getThinkingLevel: () => string): void {
   const prototype = UserMessageComponent.prototype as unknown as PatchableUserMessagePrototype;
+  prototype.__ampUserMessageGetTheme = getTheme;
+  prototype.__ampUserMessageGetThinkingLevel = getThinkingLevel;
+
   if (prototype.__ampUserMessagePatched) return;
 
   prototype.__ampUserMessageOriginalRender = prototype.render;
   prototype.render = function renderWithAmpUserMessage(width: number): string[] {
     const original = prototype.__ampUserMessageOriginalRender ?? prototype.render;
-    const theme = getTheme();
-    const color = getThinkingColor(getThinkingLevel());
+    const theme = prototype.__ampUserMessageGetTheme?.();
+    const thinkingLevel = prototype.__ampUserMessageGetThinkingLevel?.() ?? "off";
+    const color = getThinkingColor(thinkingLevel);
     const ampLines = renderAmpUserMessage(this as PatchableUserMessagePrototype, width, theme, color);
     return ampLines ?? original.call(this, width);
   };

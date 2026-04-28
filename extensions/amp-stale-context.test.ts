@@ -115,6 +115,8 @@ function resetUserMessagePatch(): void {
     render: UserMessageComponent["render"];
     __ampUserMessageOriginalRender?: UserMessageComponent["render"];
     __ampUserMessagePatched?: boolean;
+    __ampUserMessageGetTheme?: () => unknown;
+    __ampUserMessageGetThinkingLevel?: () => string;
   };
 
   if (prototype.__ampUserMessageOriginalRender) {
@@ -123,6 +125,8 @@ function resetUserMessagePatch(): void {
 
   delete prototype.__ampUserMessageOriginalRender;
   delete prototype.__ampUserMessagePatched;
+  delete prototype.__ampUserMessageGetTheme;
+  delete prototype.__ampUserMessageGetThinkingLevel;
 }
 
 test("amp user message render stays safe after session manager becomes stale", () => {
@@ -486,6 +490,67 @@ test("amp user message uses runtime thinking level after resume when session has
 
   const message = new UserMessageComponent("hello from amp");
   expect(message.render(48).join("\n")).toMatch(/\[thinkingHigh\]▌/);
+
+  resetUserMessagePatch();
+});
+
+test("amp user message refreshes prototype state after extension reload", () => {
+  resetUserMessagePatch();
+
+  let firstThinkingLevel = "low";
+  const first = createPiStub(() => firstThinkingLevel);
+  ampUserMessageExtension(first.pi);
+
+  const firstSessionStart = expectDefined(first.handlers.get("session_start"), "first session_start handler should be registered");
+  firstSessionStart(
+    { type: "session_start", reason: "startup" },
+    {
+      hasUI: true,
+      sessionManager: createSessionManagerWithoutThinking(),
+      ui: {
+        theme: {
+          fg(color: string, text: string) {
+            return `[first:${color}]${text}`;
+          },
+          italic(text: string) {
+            return text;
+          },
+        },
+      },
+    } as unknown as ExtensionContext,
+  );
+
+  const beforeReload = new UserMessageComponent("hello from amp");
+  expect(beforeReload.render(48).join("\n")).toMatch(/\[first:thinkingLow\]▌/);
+
+  const second = createPiStub(() => "high");
+  ampUserMessageExtension(second.pi);
+
+  const secondSessionStart = expectDefined(second.handlers.get("session_start"), "second session_start handler should be registered");
+  secondSessionStart(
+    { type: "session_start", reason: "reload" },
+    {
+      hasUI: true,
+      sessionManager: createSessionManagerWithoutThinking(),
+      ui: {
+        theme: {
+          fg(color: string, text: string) {
+            return `[second:${color}]${text}`;
+          },
+          italic(text: string) {
+            return text;
+          },
+        },
+      },
+    } as unknown as ExtensionContext,
+  );
+
+  firstThinkingLevel = "minimal";
+
+  const afterReload = new UserMessageComponent("hello from amp");
+  const rendered = afterReload.render(48).join("\n");
+  expect(rendered).toMatch(/\[second:thinkingHigh\]▌/);
+  expect(rendered).not.toMatch(/\[first:thinkingMinimal\]▌/);
 
   resetUserMessagePatch();
 });
