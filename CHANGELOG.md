@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.11
+
+- Hide Pi's built-in working loader row when supported.
+- Render Amp working state in the existing editor status row while keeping git status on the right.
+
 ## 0.2.10
 
 - Add an Amp-style overlay command palette for slash commands.

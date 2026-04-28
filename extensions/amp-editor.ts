@@ -7,8 +7,15 @@ import { relative } from "node:path";
 
 const MIN_BODY_LINES = 2;
 const GIT_CACHE_MS = 2000;
+const STATUS_LEFT_INSET = 1;
 const STATUS_RIGHT_INSET = 1;
 const WORKING_FRAMES = ["~", "≈", "≋"];
+
+type WorkingState = {
+  active: boolean;
+  message: string;
+  frame: string;
+};
 
 type GitInfo = {
   branch: string | null;
@@ -163,6 +170,7 @@ class AmpEditor extends CustomEditor {
     keybindings: any,
     private readonly getCtx: () => ExtensionContext,
     private readonly getThinkingLevel: () => string,
+    private readonly getWorkingState: () => WorkingState,
     private readonly openCommandPalette: (initialQuery: string | undefined, onSelect: (command: string) => void) => void,
   ) {
     super(tui, theme, keybindings, { paddingX: 1 });
@@ -209,13 +217,14 @@ class AmpEditor extends CustomEditor {
     const leftTop = this.getUsageLabel();
     const rightTop = this.getModelLabel(Math.max(8, Math.floor(innerWidth * 0.48)));
     const cwdLabel = this.getCwdLabel();
+    const workingLabel = this.getWorkingLabel();
     const gitChangesLabel = this.getGitChangesLabel();
 
     return [
       this.borderWithLabels(width, leftTop, rightTop),
       ...body.map((line) => this.wrapBody(line, innerWidth)),
       this.borderWithRightLabel(width, cwdLabel),
-      ...this.statusRows(width, gitChangesLabel),
+      ...this.statusRows(width, workingLabel, gitChangesLabel),
       ...this.wrapPopupBlock(popupLines, width),
     ];
   }
@@ -267,6 +276,13 @@ class AmpEditor extends CustomEditor {
     return ` ${compactPath(this.ctx.cwd)}${git.branch ? ` (${git.branch})` : ""} `;
   }
 
+  private getWorkingLabel(): string {
+    const working = this.getWorkingState();
+    if (!working.active) return "";
+
+    return `${this.fg("accent", working.frame)} ${this.fg("muted", working.message)}`;
+  }
+
   private getGitChangesLabel(): string {
     const git = getGitInfo(this.ctx.cwd);
     if (git.changedFiles === 0) return "";
@@ -298,14 +314,18 @@ class AmpEditor extends CustomEditor {
     });
   }
 
-  private statusRows(width: number, gitChangesLabel: string): string[] {
-    if (!gitChangesLabel) return [];
+  private statusRows(width: number, leftLabel: string, rightLabel: string): string[] {
+    if (!leftLabel && !rightLabel) return [];
 
-    const contentWidth = Math.max(1, width - STATUS_RIGHT_INSET);
-    const clipped = truncateToWidth(gitChangesLabel, contentWidth, "…");
-    const leftPadding = " ".repeat(Math.max(0, contentWidth - visibleWidth(clipped)));
-    const rightPadding = " ".repeat(Math.min(STATUS_RIGHT_INSET, Math.max(0, width - contentWidth)));
-    return [`${leftPadding}${clipped}${rightPadding}`];
+    const contentWidth = Math.max(1, width - STATUS_LEFT_INSET - STATUS_RIGHT_INSET);
+    const maxLeft = Math.max(0, Math.floor(contentWidth * 0.44));
+    const maxRight = Math.max(0, contentWidth - maxLeft - 2);
+    const left = truncateToWidth(leftLabel, maxLeft, "…");
+    const right = truncateToWidth(rightLabel, maxRight, "…");
+    const gap = " ".repeat(Math.max(1, contentWidth - visibleWidth(left) - visibleWidth(right)));
+    const leftPadding = " ".repeat(Math.min(STATUS_LEFT_INSET, Math.max(0, width - contentWidth)));
+    const rightPadding = " ".repeat(Math.min(STATUS_RIGHT_INSET, Math.max(0, width - contentWidth - visibleWidth(leftPadding))));
+    return [`${leftPadding}${left}${gap}${right}${rightPadding}`];
   }
 
   private borderWithLabels(width: number, leftLabel: string, rightLabel: string): string {
@@ -346,7 +366,34 @@ export default function (pi: ExtensionAPI) {
   const activeToolExecutions = new Set<string>();
   let activeThinkingLevel = "off";
   let activeCtx: ExtensionContext | undefined;
+  let activeTui: { requestRender(): void } | undefined;
   let commandPaletteOpen = false;
+  let isWorking = false;
+  let workingMessage = "Waiting for response...";
+  let workingFrameIndex = 0;
+  let workingTimer: ReturnType<typeof setInterval> | undefined;
+
+  const requestRender = () => activeTui?.requestRender();
+
+  const stopWorkingTimer = () => {
+    if (!workingTimer) return;
+    clearInterval(workingTimer);
+    workingTimer = undefined;
+  };
+
+  const startWorkingTimer = () => {
+    stopWorkingTimer();
+    workingTimer = setInterval(() => {
+      workingFrameIndex = (workingFrameIndex + 1) % WORKING_FRAMES.length;
+      requestRender();
+    }, 160);
+  };
+
+  const setWorkingMessage = (message: string, ctx?: ExtensionContext) => {
+    workingMessage = message;
+    ctx?.ui.setWorkingMessage(message);
+    requestRender();
+  };
 
   const openCommandPalette = (initialQuery = "", onSelect: (command: string) => void) => {
     const ctx = activeCtx;
@@ -387,18 +434,20 @@ export default function (pi: ExtensionAPI) {
     activeCtx = ctx;
     activeThinkingLevel = getSafeThinkingLevel(pi, ctx.sessionManager);
 
-    ctx.ui.setEditorComponent((tui, theme, keybindings) =>
-      new AmpEditor(tui, theme, keybindings, () => activeCtx ?? ctx, () => {
+    ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+      activeTui = tui;
+      return new AmpEditor(tui, theme, keybindings, () => activeCtx ?? ctx, () => {
         const currentCtx = activeCtx ?? ctx;
         activeThinkingLevel = getSafeThinkingLevel(pi, currentCtx.sessionManager);
         return activeThinkingLevel;
-      }, openCommandPalette),
-    );
-
-    ctx.ui.setWorkingIndicator({
-      frames: WORKING_FRAMES.map((frame) => ctx.ui.theme.fg("accent", frame)),
-      intervalMs: 160,
+      }, () => ({
+        active: isWorking,
+        message: workingMessage,
+        frame: WORKING_FRAMES[workingFrameIndex] ?? WORKING_FRAMES[0],
+      }), openCommandPalette);
     });
+
+    (ctx.ui as typeof ctx.ui & { setWorkingVisible?: (visible: boolean) => void }).setWorkingVisible?.(false);
 
     ctx.ui.setFooter(() => ({
       invalidate() {},
@@ -411,36 +460,47 @@ export default function (pi: ExtensionAPI) {
   pi.on("before_agent_start", (_event, ctx) => {
     activeThinkingLevel = getSafeThinkingLevel(pi, ctx.sessionManager);
     activeToolExecutions.clear();
+    isWorking = true;
+    workingFrameIndex = 0;
+    startWorkingTimer();
     if (!ctx.hasUI) return;
-    ctx.ui.setWorkingMessage("Waiting for response...");
+    setWorkingMessage("Waiting for response...", ctx);
   });
 
   pi.on("message_update", (event, ctx) => {
     if (!ctx.hasUI || event.message.role !== "assistant") return;
     if (activeToolExecutions.size > 0) return;
-    ctx.ui.setWorkingMessage("Streaming response...");
+    setWorkingMessage("Streaming response...", ctx);
   });
 
   pi.on("tool_execution_start", (event, ctx) => {
-    if (!ctx.hasUI) return;
     activeToolExecutions.add(event.toolCallId);
-    ctx.ui.setWorkingMessage("Running tools...");
+    if (!ctx.hasUI) return;
+    setWorkingMessage("Running tools...", ctx);
   });
 
   pi.on("tool_execution_update", (_event, ctx) => {
     if (!ctx.hasUI) return;
-    ctx.ui.setWorkingMessage("Running tools...");
+    setWorkingMessage("Running tools...", ctx);
   });
 
   pi.on("tool_execution_end", (event, ctx) => {
     activeToolExecutions.delete(event.toolCallId);
     if (!ctx.hasUI) return;
     if (activeToolExecutions.size === 0) {
-      ctx.ui.setWorkingMessage("Waiting for response...");
+      setWorkingMessage("Waiting for response...", ctx);
     }
   });
 
   pi.on("agent_end", (_event, _ctx) => {
+    isWorking = false;
     activeToolExecutions.clear();
+    stopWorkingTimer();
+    requestRender();
+  });
+
+  pi.on("session_shutdown", () => {
+    stopWorkingTimer();
+    activeTui = undefined;
   });
 }
