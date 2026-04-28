@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.13
+
+- Update README to describe the latest editor working-status and color-sync behavior.
+
 ## 0.2.12
 
 - Keep Amp user message colors synchronized with editor thinking colors after extension reloads.
