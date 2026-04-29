@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.15
+
+- Fix command palette rows for multi-line skill descriptions so text cannot leak outside the overlay.
+- Match Pi slash-command semantics: interactive built-in and extension commands run on Enter, while skill and prompt commands insert into the editor for review.
+- Keep Tab as insert-only for every command source, and add regression coverage for command-source behavior.
+
 ## 0.2.14
 
 - Rework `amp-gruvbox-dark-hard` to use the canonical Gruvbox dark hard palette.
