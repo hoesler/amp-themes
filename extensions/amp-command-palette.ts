@@ -1,5 +1,5 @@
-import type { Theme, ThemeColor } from "@mariozechner/pi-coding-agent";
-import { type Component, fuzzyFilter, Key, type KeybindingsManager, matchesKey, parseKey, type TUI, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import type { Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
+import { type Component, fuzzyFilter, Key, type KeybindingsManager, matchesKey, parseKey, type TUI, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 const MIN_WIDTH = 40;
 const MAX_ROWS = 14;

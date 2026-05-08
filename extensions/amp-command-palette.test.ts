@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import ampEditorExtension from "./amp-editor.js";
 import { CommandPaletteOverlay, stripAnsi, type CommandPaletteItem, type CommandPaletteResult } from "./amp-command-palette.js";

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { UserMessageComponent, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { UserMessageComponent, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import ampEditorExtension from "./amp-editor.js";
 import ampUserMessageExtension from "./amp-user-message.js";

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 
@@ -65,6 +65,38 @@ type ThemeFile = {
 function readTheme(fileName: string): ThemeFile {
   return JSON.parse(readFileSync(join(process.cwd(), "themes", fileName), "utf8")) as ThemeFile;
 }
+
+test("amp-themes uses the current Pi package namespace", () => {
+  const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+    devDependencies: Record<string, string>;
+    peerDependencies: Record<string, string>;
+    peerDependenciesMeta: Record<string, unknown>;
+  };
+
+  expect(packageJson.peerDependencies).toHaveProperty("@earendil-works/pi-coding-agent");
+  expect(packageJson.peerDependencies).toHaveProperty("@earendil-works/pi-tui");
+  expect(packageJson.devDependencies).toHaveProperty("@earendil-works/pi-coding-agent");
+  expect(packageJson.devDependencies).toHaveProperty("@earendil-works/pi-tui");
+  expect(packageJson.peerDependenciesMeta).toHaveProperty("@earendil-works/pi-coding-agent");
+  expect(packageJson.peerDependenciesMeta).toHaveProperty("@earendil-works/pi-tui");
+
+  const serializedPackageJson = JSON.stringify(packageJson);
+  expect(serializedPackageJson).not.toContain("@mariozechner/pi-coding-agent");
+  expect(serializedPackageJson).not.toContain("@mariozechner/pi-tui");
+});
+
+test("extension source imports Pi packages from the current namespace", () => {
+  const extensionFiles = readdirSync(join(process.cwd(), "extensions"))
+    .filter((fileName) => fileName.endsWith(".ts"))
+    .filter((fileName) => !fileName.endsWith(".test.ts"));
+
+  for (const fileName of extensionFiles) {
+    const source = readFileSync(join(process.cwd(), "extensions", fileName), "utf8");
+
+    expect(source, fileName).not.toContain("@mariozechner/pi-coding-agent");
+    expect(source, fileName).not.toContain("@mariozechner/pi-tui");
+  }
+});
 
 test.each([
   ["amp-dark.json", "amp-dark"],

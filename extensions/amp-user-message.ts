@@ -3,8 +3,8 @@ import {
   UserMessageComponent,
   type ExtensionAPI,
   type ThemeColor,
-} from "@mariozechner/pi-coding-agent";
-import { Markdown, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-coding-agent";
+import { Markdown, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 type RenderFn = (width: number) => string[];
 type PatchableUserMessagePrototype = {

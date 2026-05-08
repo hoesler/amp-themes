@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.17
+
+- Move amp-themes extension imports and Pi peer/development dependencies to the new `@earendil-works` package namespace.
+- Keep bundled `pi-tool-display` unchanged for now while its upstream package still uses the legacy `@mariozechner` namespace.
+- Add regression coverage for amp-themes package metadata and extension source imports so the main package does not drift back to the legacy Pi namespace.
+
 ## 0.2.16
 
 - Require Pi 0.73 development types and use current thinking-level APIs directly.
