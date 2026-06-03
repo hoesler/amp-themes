@@ -56,13 +56,29 @@ function formatCost(value: number): string {
   return `$${value.toFixed(4)}`;
 }
 
+export function compactModelId(modelId: string, maxWidth: number): string {
+  if (visibleWidth(modelId) <= maxWidth) return modelId;
+  const simplified = modelId
+    .replace(/^claude-/, "")
+    .replace(/^gpt-/, "")
+    .replace(/-20\d{6}$/, "")
+    .replace(/-\d{4}-\d{2}-\d{2}$/, "");
+  if (visibleWidth(simplified) <= maxWidth) return simplified;
+  return truncateToWidth(simplified, maxWidth, "…");
+}
+
 export function formatStatusTopRight(input: {
+  model: string;
   cost: number;
   thinking: string;
   fg: (color: ThemeColor, text: string) => string;
 }): string {
-  const thinkingPart = input.fg(thinkingColorFor(input.thinking), input.thinking);
-  return `${input.fg("muted", formatCost(input.cost))} ${input.fg("dim", "·")} ${thinkingPart}`;
+  const sep = ` ${input.fg("dim", "·")} `;
+  const parts: string[] = [];
+  if (input.model) parts.push(input.fg("muted", input.model));
+  parts.push(input.fg("muted", formatCost(input.cost)));
+  parts.push(input.fg(thinkingColorFor(input.thinking), input.thinking));
+  return parts.join(sep);
 }
 
 function compactPath(cwd: string): string {
@@ -174,7 +190,9 @@ class AmpEditor extends CustomEditor {
       body.push(" ".repeat(innerWidth));
     }
 
+    const modelId = this.ctx.model?.id ?? "";
     const rightTop = formatStatusTopRight({
+      model: modelId ? compactModelId(modelId, Math.max(8, Math.floor(innerWidth * 0.3))) : "",
       cost: getSessionCost(this.ctx),
       thinking: this.getThinkingLevel(),
       fg: (c, t) => this.fg(c, t),
@@ -237,7 +255,7 @@ class AmpEditor extends CustomEditor {
 
   private borderWithLabels(width: number, leftLabel: string, rightLabel: string): string {
     const innerWidth = Math.max(0, width - 2);
-    const maxLeft = Math.max(0, Math.floor(innerWidth * 0.44));
+    const maxLeft = leftLabel ? Math.max(0, Math.floor(innerWidth * 0.44)) : 0;
     const maxRight = Math.max(0, innerWidth - maxLeft - 2);
     const left = leftLabel ? this.fg("muted", truncateToWidth(leftLabel, maxLeft, "…")) : "";
     const right = rightLabel ? ` ${truncateToWidth(rightLabel, Math.max(0, maxRight - 2), "…")} ` : "";
