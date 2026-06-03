@@ -62,8 +62,9 @@ export function macAppearanceProbe(): Appearance | null {
 const THEME_FOR: Record<Appearance, string> = { dark: "amp-dark", light: "amp-light" };
 const AMP_THEMES = new Set(Object.values(THEME_FOR));
 
-function readOverride(ctx: ExtensionContext): Appearance | null {
-  const raw = (ctx as { settings?: { get?: (k: string) => unknown } }).settings?.get?.("amp.appearance");
+/** Explicit manual override via the AMP_APPEARANCE env var ("dark"|"light"). */
+export function readOverride(): Appearance | null {
+  const raw = process.env.AMP_APPEARANCE?.trim().toLowerCase();
   return raw === "dark" || raw === "light" ? raw : null;
 }
 
@@ -75,7 +76,7 @@ function syncTheme(ctx: ExtensionContext): void {
   if (active && !AMP_THEMES.has(active)) return;
 
   const appearance = detectAppearance({
-    override: readOverride(ctx),
+    override: readOverride(),
     mac: macAppearanceProbe,
     osc: oscAppearanceProbe,
   });

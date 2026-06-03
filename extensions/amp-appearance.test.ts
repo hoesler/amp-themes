@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-import { detectAppearance, type AppearanceProbes, appearanceFromOscReply } from "./amp-appearance.js";
+import { describe, expect, test, afterEach } from "vitest";
+import { detectAppearance, type AppearanceProbes, appearanceFromOscReply, readOverride } from "./amp-appearance.js";
 
 function probes(overrides: Partial<AppearanceProbes>): AppearanceProbes {
   return { override: null, mac: () => null, osc: () => null, ...overrides };
@@ -34,5 +34,27 @@ describe("appearanceFromOscReply", () => {
   });
   test("returns null on unparseable input", () => {
     expect(appearanceFromOscReply("garbage")).toBeNull();
+  });
+});
+
+describe("readOverride (AMP_APPEARANCE env var)", () => {
+  const original = process.env.AMP_APPEARANCE;
+  afterEach(() => {
+    if (original === undefined) delete process.env.AMP_APPEARANCE;
+    else process.env.AMP_APPEARANCE = original;
+  });
+
+  test("reads dark/light case-insensitively", () => {
+    process.env.AMP_APPEARANCE = "LIGHT";
+    expect(readOverride()).toBe("light");
+    process.env.AMP_APPEARANCE = "dark";
+    expect(readOverride()).toBe("dark");
+  });
+
+  test("returns null when unset or invalid", () => {
+    delete process.env.AMP_APPEARANCE;
+    expect(readOverride()).toBeNull();
+    process.env.AMP_APPEARANCE = "purple";
+    expect(readOverride()).toBeNull();
   });
 });
