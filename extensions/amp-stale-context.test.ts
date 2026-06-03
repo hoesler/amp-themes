@@ -469,11 +469,11 @@ test("amp editor uses latest context and cost after reload", () => {
     { matches: () => false },
   );
 
-  expect(editor.render(100).join("\n")).toMatch(/12% of 272k · \$1\.23 \(sub\)/);
+  expect(editor.render(100).join("\n")).toMatch(/\$1\.23 · ⚡high/);
 
   sessionStart({ type: "session_start", reason: "reload" }, createCtx(72, 16.37));
 
-  expect(editor.render(100).join("\n")).toMatch(/72% of 272k · \$16\.37 \(sub\)/);
+  expect(editor.render(100).join("\n")).toMatch(/\$16\.37 · ⚡high/);
 });
 
 test("amp editor border follows the runtime border color function", () => {
@@ -568,7 +568,7 @@ test("amp editor uses runtime thinking level after resume when session has no th
     { matches: () => false },
   );
 
-  expect(editor.render(80).join("\n")).toMatch(/ high /);
+  expect(editor.render(80).join("\n")).toMatch(/⚡high/);
 });
 
 test("amp user message follows thinking_level_select changes after session start", () => {

@@ -82,20 +82,29 @@ function formatCost(value: number): string {
   if (value === 0) return "$0.000";
   if (value >= 1) return `$${value.toFixed(2)}`;
   if (value >= 0.01) return `$${value.toFixed(3)}`;
+  if (value >= 0.001) return `$${value.toFixed(3)}`;
   return `$${value.toFixed(4)}`;
 }
 
-function compactModelId(modelId: string, maxWidth: number): string {
-  if (visibleWidth(modelId) <= maxWidth) return modelId;
+export function thinkingColorFor(level: string): ThemeColor {
+  switch (level) {
+    case "minimal": return "thinkingMinimal";
+    case "low": return "thinkingLow";
+    case "medium": return "thinkingMedium";
+    case "high": return "thinkingHigh";
+    case "xhigh": return "thinkingXhigh";
+    default: return "thinkingOff";
+  }
+}
 
-  const simplified = modelId
-    .replace(/^claude-/, "")
-    .replace(/^gpt-/, "")
-    .replace(/-20\d{6}$/, "")
-    .replace(/-\d{4}-\d{2}-\d{2}$/, "");
-
-  if (visibleWidth(simplified) <= maxWidth) return simplified;
-  return truncateToWidth(simplified, maxWidth, "…");
+export function formatStatusTopRight(input: {
+  cost: number;
+  thinking: string;
+  fg: (color: ThemeColor, text: string) => string;
+}): string {
+  const thinkingPart = `${input.fg("accent", "⚡")}${input.fg(thinkingColorFor(input.thinking), input.thinking)}`;
+  if (input.cost <= 0) return thinkingPart;
+  return `${input.fg("muted", formatCost(input.cost))} ${input.fg("dim", "·")} ${thinkingPart}`;
 }
 
 function compactPath(cwd: string): string {
@@ -209,61 +218,21 @@ class AmpEditor extends CustomEditor {
       body.push(" ".repeat(innerWidth));
     }
 
-    const leftTop = this.getUsageLabel();
-    const rightTop = this.getModelLabel(Math.max(8, Math.floor(innerWidth * 0.48)));
+    const rightTop = formatStatusTopRight({
+      cost: getSessionCost(this.ctx).total,
+      thinking: this.getThinkingLevel(),
+      fg: (c, t) => this.fg(c, t),
+    });
     const cwdLabel = this.getCwdLabel();
     const workingLabel = this.getWorkingLabel();
-    const gitChangesLabel = this.getGitChangesLabel();
 
     return [
-      this.borderWithLabels(width, leftTop, rightTop),
+      this.borderWithLabels(width, "", rightTop),
       ...body.map((line) => this.wrapBody(line, innerWidth)),
       this.borderWithRightLabel(width, cwdLabel),
-      ...this.statusRows(width, workingLabel, gitChangesLabel),
+      ...this.statusRows(width, workingLabel, ""),
       ...this.wrapPopupBlock(popupLines, width),
     ];
-  }
-
-  private getUsageLabel(): string {
-    const usage = this.ctx.getContextUsage();
-    const pct = usage?.percent == null ? "?" : `${Math.max(0, Math.floor(usage.percent))}%`;
-    const contextWindow = usage?.contextWindow ?? this.ctx.model?.contextWindow ?? null;
-    const parts = [` ${pct} of ${formatCount(contextWindow)}`];
-
-    const cost = getSessionCost(this.ctx);
-    if (cost.hasCost || cost.usingSubscription) {
-      parts.push(`${formatCost(cost.total)}${cost.usingSubscription ? " (sub)" : ""}`);
-    }
-
-    return `${parts.join(" · ")} `;
-  }
-
-  private getModelLabel(maxWidth: number): string {
-    const modelId = this.ctx.model?.id ?? "model unknown";
-    const thinkingLevel = this.getThinkingLevel();
-    const thinkingWidth = visibleWidth(thinkingLevel);
-    const modelWidth = Math.max(1, maxWidth - thinkingWidth - 3);
-    const model = this.fg("text", compactModelId(modelId, modelWidth));
-    const thinking = this.fg(this.getThinkingColor(), thinkingLevel);
-    return ` ${model} ${this.fg("dim", "·")} ${thinking} `;
-  }
-
-  private getThinkingColor(): ThemeColor {
-    switch (this.getThinkingLevel()) {
-      case "minimal":
-        return "thinkingMinimal";
-      case "low":
-        return "thinkingLow";
-      case "medium":
-        return "thinkingMedium";
-      case "high":
-        return "thinkingHigh";
-      case "xhigh":
-        return "thinkingXhigh";
-      case "off":
-      default:
-        return "thinkingOff";
-    }
   }
 
   private getCwdLabel(): string {
