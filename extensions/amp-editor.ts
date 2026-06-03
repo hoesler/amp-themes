@@ -9,6 +9,10 @@ import { relative } from "node:path";
 const MIN_BODY_LINES = 2;
 const GIT_CACHE_MS = 2000;
 const WORKING_FRAMES = ["~", "≈", "≋"];
+const WORKING_WAITING = "Waiting";
+const WORKING_THINKING = "Thinking";
+const WORKING_STREAMING = "Streaming";
+const WORKING_TOOLS = "Using tools";
 
 type WorkingState = {
   active: boolean;
@@ -269,7 +273,7 @@ export default function (pi: ExtensionAPI) {
   let activeTui: { requestRender(): void } | undefined;
   let commandPaletteOpen = false;
   let isWorking = false;
-  let workingMessage = "Waiting for response...";
+  let workingMessage = WORKING_WAITING;
   let workingFrameIndex = 0;
   let workingTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -366,7 +370,7 @@ export default function (pi: ExtensionAPI) {
     startWorkingTimer();
     if (!ctx.hasUI) return;
     hideBuiltInWorking(ctx);
-    setWorkingMessage("Waiting for response...", ctx);
+    setWorkingMessage(WORKING_WAITING, ctx);
   });
 
   pi.on("agent_start", (_event, ctx) => {
@@ -377,25 +381,31 @@ export default function (pi: ExtensionAPI) {
   pi.on("message_update", (event, ctx) => {
     if (!ctx.hasUI || event.message.role !== "assistant") return;
     if (activeToolExecutions.size > 0) return;
-    setWorkingMessage("Streaming response...", ctx);
+    // Pi streams distinct phases: thinking_* (reasoning) then text_*/toolcall_* (output).
+    const phase = event.assistantMessageEvent?.type ?? "";
+    if (phase.startsWith("thinking")) {
+      setWorkingMessage(WORKING_THINKING, ctx);
+    } else if (phase.startsWith("text") || phase.startsWith("toolcall")) {
+      setWorkingMessage(WORKING_STREAMING, ctx);
+    }
   });
 
   pi.on("tool_execution_start", (event, ctx) => {
     activeToolExecutions.add(event.toolCallId);
     if (!ctx.hasUI) return;
-    setWorkingMessage("Running tools...", ctx);
+    setWorkingMessage(WORKING_TOOLS, ctx);
   });
 
   pi.on("tool_execution_update", (_event, ctx) => {
     if (!ctx.hasUI) return;
-    setWorkingMessage("Running tools...", ctx);
+    setWorkingMessage(WORKING_TOOLS, ctx);
   });
 
   pi.on("tool_execution_end", (event, ctx) => {
     activeToolExecutions.delete(event.toolCallId);
     if (!ctx.hasUI) return;
     if (activeToolExecutions.size === 0) {
-      setWorkingMessage("Waiting for response...", ctx);
+      setWorkingMessage(WORKING_WAITING, ctx);
     }
   });
 
