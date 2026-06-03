@@ -41,6 +41,8 @@ interface ToolResultLike {
  * assignable to the real definition without importing internal types.
  */
 export interface AmpToolRenderContext {
+  /** Current tool call arguments (shared across call/result renders). */
+  args: unknown;
   /** Shared mutable renderer state for this tool row. */
   state: unknown;
   /** Previously returned component for this render slot, if any. */
@@ -90,6 +92,25 @@ export function shortenPath(inputPath: string | undefined): string {
     return `~${inputPath.slice(home.length)}`;
   }
   return inputPath;
+}
+
+/**
+ * Count the number of lines in a block of text for display headers
+ * (e.g. `wrote <path> (<N> lines)`).
+ *
+ * A single trailing newline is treated as the line terminator of the final
+ * line, NOT as an extra empty line: `"a\nb"` and `"a\nb\n"` both count as 2.
+ * Empty content counts as 0 lines.
+ */
+export function countLines(text: string): number {
+  if (!text) {
+    return 0;
+  }
+  const normalised = text.replace(/\r\n?/g, "\n");
+  const withoutTrailingNewline = normalised.endsWith("\n")
+    ? normalised.slice(0, -1)
+    : normalised;
+  return withoutTrailingNewline.split("\n").length;
 }
 
 /** Split text into lines, normalising CRLF and expanding tabs to 4 spaces. */

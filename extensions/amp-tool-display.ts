@@ -10,13 +10,16 @@
  */
 import {
   createBashToolDefinition,
+  createEditToolDefinition,
   createFindToolDefinition,
   createGrepToolDefinition,
   createLsToolDefinition,
   createReadToolDefinition,
+  createWriteToolDefinition,
   type ExtensionAPI,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
+import { getConfig } from "./amp-tool-config.js";
 import {
   renderFindCall,
   renderFindResult,
@@ -28,6 +31,13 @@ import {
   renderReadResult,
 } from "./amp-tools-readonly.js";
 import { renderBashCall, renderBashResult } from "./amp-tools-bash.js";
+import {
+  renderEditCall,
+  renderEditResult,
+  renderWriteCall,
+  renderWriteResult,
+} from "./amp-tools-edit.js";
+import { registerMcpTools } from "./amp-tools-mcp.js";
 
 /**
  * `TSchema` lives in the `typebox` package, which is a transitive dependency of
@@ -89,11 +99,28 @@ export default function (pi: ExtensionAPI): void {
     renderResult: renderBashResult,
   });
 
-  // TODO(build-agent-2): wire edit + write via amp-tools-edit.ts here using
-  //   override(pi, createEditToolDefinition(cwd), { renderCall, renderResult })
-  //   override(pi, createWriteToolDefinition(cwd), { renderCall, renderResult })
-  // and register MCP tool renderers (amp-tools-mcp.ts) discovered via
-  // pi.getAllTools() on "session_start" and "before_agent_start" (deduped,
-  // wrapped in try/catch). Until then those tools fall back to Pi's default
-  // renderer, which is acceptable mid-build.
+  // edit keeps its inherited `renderShell: "self"` (brief R3): the override
+  // helper only sets renderCall/renderResult, so the diff-centric framing the
+  // built-in edit tool ships with is preserved.
+  override(pi, createEditToolDefinition(cwd), {
+    renderCall: renderEditCall,
+    renderResult: renderEditResult,
+  });
+
+  override(pi, createWriteToolDefinition(cwd), {
+    renderCall: renderWriteCall,
+    renderResult: renderWriteResult,
+  });
+
+  // MCP tools are discovered at runtime (not via a static factory) and cannot
+  // be safely re-rendered — re-registering them would clobber their execute
+  // (see amp-tools-mcp.ts). We run idempotent discovery on both lifecycle
+  // events so the survey stays current; MCP keeps Pi's default renderer.
+  registerMcpTools(pi, getConfig);
+  pi.on("session_start", () => {
+    registerMcpTools(pi, getConfig);
+  });
+  pi.on("before_agent_start", () => {
+    registerMcpTools(pi, getConfig);
+  });
 }

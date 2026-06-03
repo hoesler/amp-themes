@@ -85,6 +85,30 @@ test("amp-themes uses the current Pi package namespace", () => {
   expect(serializedPackageJson).not.toContain("@mariozechner/pi-tui");
 });
 
+test("amp-themes no longer bundles pi-tool-display and ships its own tool display", () => {
+  const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+    bundledDependencies?: string[];
+    bundleDependencies?: string[];
+    pi?: { extensions?: string[] };
+  };
+
+  // Tool rendering is now self-authored, so pi-tool-display must not be a
+  // dependency, a bundled dependency, or a registered extension anywhere.
+  expect(packageJson.dependencies ?? {}).not.toHaveProperty("pi-tool-display");
+  expect(packageJson.bundledDependencies ?? []).not.toContain("pi-tool-display");
+  expect(packageJson.bundleDependencies ?? []).not.toContain("pi-tool-display");
+
+  const extensions = packageJson.pi?.extensions ?? [];
+  expect(extensions).not.toContain("pi-tool-display");
+  for (const extension of extensions) {
+    expect(extension).not.toContain("pi-tool-display");
+  }
+
+  // Our own tool-display extension is registered instead.
+  expect(extensions).toContain("./extensions/amp-tool-display.ts");
+});
+
 test("extension source imports Pi packages from the current namespace", () => {
   const extensionFiles = readdirSync(join(process.cwd(), "extensions"))
     .filter((fileName) => fileName.endsWith(".ts"))
