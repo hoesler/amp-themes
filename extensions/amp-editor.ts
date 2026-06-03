@@ -25,12 +25,6 @@ type GitInfo = {
   removed: number;
 };
 
-type UsageCost = {
-  total: number;
-  hasCost: boolean;
-  usingSubscription: boolean;
-};
-
 let gitCache: { cwd: string; at: number; info: GitInfo } | undefined;
 
 function runGit(cwd: string, args: string[]): string {
@@ -71,17 +65,9 @@ function getGitInfo(cwd: string): GitInfo {
   return info;
 }
 
-function formatCount(value: number | null | undefined): string {
-  if (value == null) return "?";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
-  if (value >= 1_000) return `${Math.round(value / 1_000)}k`;
-  return String(value);
-}
-
 function formatCost(value: number): string {
   if (value === 0) return "$0.000";
   if (value >= 1) return `$${value.toFixed(2)}`;
-  if (value >= 0.01) return `$${value.toFixed(3)}`;
   if (value >= 0.001) return `$${value.toFixed(3)}`;
   return `$${value.toFixed(4)}`;
 }
@@ -133,9 +119,8 @@ function splitEditorRender(lines: string[]): { editorLines: string[]; popupLines
   };
 }
 
-function getSessionCost(ctx: ExtensionContext): UsageCost {
+function getSessionCost(ctx: ExtensionContext): number {
   let total = 0;
-  let hasCost = false;
 
   for (const entry of ctx.sessionManager.getEntries()) {
     if (entry.type !== "message" || entry.message.role !== "assistant") continue;
@@ -144,14 +129,9 @@ function getSessionCost(ctx: ExtensionContext): UsageCost {
     if (typeof cost !== "number" || !Number.isFinite(cost)) continue;
 
     total += cost;
-    if (cost > 0) hasCost = true;
   }
 
-  const usingSubscription = ctx.model
-    ? Boolean((ctx.modelRegistry as { isUsingOAuth?: (model: NonNullable<ExtensionContext["model"]>) => boolean }).isUsingOAuth?.(ctx.model))
-    : false;
-
-  return { total, hasCost, usingSubscription };
+  return total;
 }
 
 function hideBuiltInWorking(ctx: ExtensionContext): void {
@@ -219,7 +199,7 @@ class AmpEditor extends CustomEditor {
     }
 
     const rightTop = formatStatusTopRight({
-      cost: getSessionCost(this.ctx).total,
+      cost: getSessionCost(this.ctx),
       thinking: this.getThinkingLevel(),
       fg: (c, t) => this.fg(c, t),
     });
