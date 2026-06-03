@@ -19,7 +19,6 @@ import {
   type ExtensionAPI,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { getConfig } from "./amp-tool-config.js";
 import {
   renderFindCall,
   renderFindResult,
@@ -37,7 +36,6 @@ import {
   renderWriteCall,
   renderWriteResult,
 } from "./amp-tools-edit.js";
-import { registerMcpTools } from "./amp-tools-mcp.js";
 
 /**
  * `TSchema` lives in the `typebox` package, which is a transitive dependency of
@@ -112,15 +110,6 @@ export default function (pi: ExtensionAPI): void {
     renderResult: renderWriteResult,
   });
 
-  // MCP tools are discovered at runtime (not via a static factory) and cannot
-  // be safely re-rendered — re-registering them would clobber their execute
-  // (see amp-tools-mcp.ts). We run idempotent discovery on both lifecycle
-  // events so the survey stays current; MCP keeps Pi's default renderer.
-  registerMcpTools(pi, getConfig);
-  pi.on("session_start", () => {
-    registerMcpTools(pi, getConfig);
-  });
-  pi.on("before_agent_start", () => {
-    registerMcpTools(pi, getConfig);
-  });
+  // MCP tools keep Pi's default rendering: renderer-only override isn't possible
+  // (getAllTools() ToolInfo has no execute to delegate to).
 }

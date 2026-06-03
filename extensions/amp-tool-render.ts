@@ -160,6 +160,34 @@ export function getExpandedPreviewLineLimit(
   return Math.min(max, lines.length);
 }
 
+/**
+ * Collapse `lines` for a result preview. When `expanded`, the limit is the
+ * expanded preview limit (`getExpandedPreviewLineLimit`); otherwise it is
+ * `config.previewLines`. Callers that need a different collapsed budget pass a
+ * config with an overridden `previewLines` (e.g. bash uses its own constant).
+ */
+export function collapseForPreview(
+  lines: string[],
+  expanded: boolean,
+  config: Pick<AmpToolConfig, "previewLines" | "expandedPreviewMaxLines">,
+): { shown: string[]; remaining: number } {
+  const limit = expanded
+    ? getExpandedPreviewLineLimit(lines, config)
+    : config.previewLines;
+  return previewLines(lines, limit);
+}
+
+/**
+ * Build the muted `… (N more line(s))` hint shown when a preview was collapsed,
+ * or an empty string when nothing was hidden (`remaining === 0`).
+ */
+export function moreHint(remaining: number, theme: RenderTheme): string {
+  if (remaining <= 0) {
+    return "";
+  }
+  return theme.fg("muted", `… (${remaining} more line${remaining === 1 ? "" : "s"})`);
+}
+
 // ---------------------------------------------------------------------------
 // Header line
 // ---------------------------------------------------------------------------

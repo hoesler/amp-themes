@@ -7,7 +7,7 @@ description: Use when configuring, installing, updating, troubleshooting, or swi
 
 ## Overview
 
-`amp-themes` is a Pi UI package. It provides Amp-style editor chrome, bundled compact tool display, and theme files `amp-dark` and `amp-light` that auto-switch to follow device appearance.
+`amp-themes` is a Pi UI package. It provides Amp-style editor chrome, self-authored compact tool display for Pi's built-in tools, and theme files `amp-dark` and `amp-light` that auto-switch to follow device appearance.
 
 Goal: make the package load once, avoid renderer conflicts, and set the intended theme.
 
@@ -35,7 +35,7 @@ Or use Pi's interactive settings:
 
 ## Conflict cleanup
 
-`amp-themes` bundles `pi-tool-display`. Do not load standalone `npm:pi-tool-display` at the same time.
+`amp-themes` registers its own renderers for Pi's built-in tools (read, grep, find, ls, bash, edit, write). Do not load standalone `npm:pi-tool-display` at the same time: it overrides the same built-in tools, so the two would double-register and conflict (last load wins).
 
 Check packages:
 
@@ -80,7 +80,7 @@ For interactive UI verification, start Pi and check startup resources show:
 ```text
 [Extensions]
   amp-themes:amp-editor.ts
-  amp-themes:node_modules/pi-tool-display
+  amp-themes:amp-tool-display.ts
 
 [Themes]
   amp-dark
@@ -93,7 +93,7 @@ The editor should show a rounded bottom input area with context usage, model id,
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Tool renderer conflict | `npm:pi-tool-display` loaded separately | `pi remove npm:pi-tool-display` |
+| Tool renderer conflict | `npm:pi-tool-display` loaded separately double-registers the built-in tools | `pi remove npm:pi-tool-display` |
 | Theme not found | Old theme name or package not installed | Use `amp-dark` or `amp-light`; run `pi install npm:amp-themes` |
 | Editor chrome not showing | Extension disabled or package filtered | Check `pi list` and `~/.pi/agent/settings.json` package filters |
 | Old `amp-agent` theme missing | Theme was renamed before general use | Set theme to `amp-dark` or `amp-light` |

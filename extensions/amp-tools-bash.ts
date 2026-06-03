@@ -21,11 +21,11 @@ import { getConfig } from "./amp-tool-config.js";
 import {
   BASH_SPINNER_FRAMES,
   BASH_SPINNER_INTERVAL_MS,
+  collapseForPreview,
   extractTextOutput,
   formatElapsed,
-  getExpandedPreviewLineLimit,
   getOrCreateSpinnerState,
-  previewLines,
+  moreHint,
   shortenPath,
   splitLines,
   statusColor,
@@ -116,10 +116,12 @@ export function renderBashResult(
   const config = getConfig();
   const output = extractTextOutput(result);
   const lines = splitLines(output);
-  const limit = options.expanded
-    ? getExpandedPreviewLineLimit(lines, config)
-    : BASH_PREVIEW_LINES;
-  const { shown, remaining } = previewLines(lines, limit);
+  // Bash uses its own collapsed budget (BASH_PREVIEW_LINES); the expanded limit
+  // still honours config.expandedPreviewMaxLines.
+  const { shown, remaining } = collapseForPreview(lines, options.expanded, {
+    ...config,
+    previewLines: BASH_PREVIEW_LINES,
+  });
 
   const icon = theme.fg(statusColor(context.isError), statusIcon(context.isError));
   const parts: string[] = [];
@@ -128,8 +130,9 @@ export function renderBashResult(
   } else {
     parts.push(`${icon} ${theme.fg("muted", context.isError ? "command failed" : "no output")}`);
   }
-  if (remaining > 0) {
-    parts.push(theme.fg("muted", `… (${remaining} more line${remaining === 1 ? "" : "s"})`));
+  const hint = moreHint(remaining, theme);
+  if (hint) {
+    parts.push(hint);
   }
   const fullOutputPath = result.details?.fullOutputPath;
   if (fullOutputPath) {

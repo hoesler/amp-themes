@@ -40,7 +40,8 @@ Read the `npm pack --dry-run` output. Confirm these are present:
 - `extensions/`
 - `themes/`
 - `skills/`
-- bundled `pi-tool-display`
+
+Confirm the `extensions/` listing includes the self-authored tool-display files (`amp-tool-display.ts`, `amp-tool-render.ts`, `amp-tools-*.ts`).
 
 Confirm repo-only screenshots are absent unless intentionally packaged.
 
@@ -99,7 +100,7 @@ gh release view v<version>
 | Publishing before GitHub push | Push the release commit and tag before `npm publish`. |
 | Missing release notes | Create a GitHub Release from the changelog entry. |
 | Trusting a partial check | Run full `npm run release:check`. |
-| Forgetting bundled dependency evidence | Confirm dry-run lists bundled `pi-tool-display`. |
+| Missing tool-display files in the tarball | Confirm dry-run lists the `extensions/` tool-display files (`amp-tool-display.ts`, `amp-tool-render.ts`, `amp-tools-*.ts`). |
 
 ## If publish fails
 

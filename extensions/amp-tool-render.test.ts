@@ -4,10 +4,12 @@ import {
   BASH_SPINNER_FRAMES,
   BASH_SPINNER_INTERVAL_MS,
   buildHeaderLine,
+  collapseForPreview,
   extractTextOutput,
   formatElapsed,
   getExpandedPreviewLineLimit,
   getOrCreateSpinnerState,
+  moreHint,
   previewLines,
   shortenPath,
   splitLines,
@@ -115,6 +117,59 @@ describe("getExpandedPreviewLineLimit", () => {
 
   test("zero means show all lines", () => {
     expect(getExpandedPreviewLineLimit(lines, { expandedPreviewMaxLines: 0 })).toBe(100);
+  });
+});
+
+describe("collapseForPreview", () => {
+  const lines = Array.from({ length: 20 }, (_, i) => String(i));
+  const config = { previewLines: 8, expandedPreviewMaxLines: 4000 };
+
+  test("collapsed uses config.previewLines", () => {
+    const { shown, remaining } = collapseForPreview(lines, false, config);
+    expect(shown).toHaveLength(8);
+    expect(remaining).toBe(12);
+  });
+
+  test("expanded uses the expanded limit", () => {
+    const { shown, remaining } = collapseForPreview(lines, true, {
+      previewLines: 8,
+      expandedPreviewMaxLines: 5,
+    });
+    expect(shown).toHaveLength(5);
+    expect(remaining).toBe(15);
+  });
+
+  test("expanded with max 0 shows all lines", () => {
+    const { shown, remaining } = collapseForPreview(lines, true, {
+      previewLines: 8,
+      expandedPreviewMaxLines: 0,
+    });
+    expect(shown).toHaveLength(20);
+    expect(remaining).toBe(0);
+  });
+
+  test("an overridden previewLines budget is honoured when collapsed", () => {
+    const { shown, remaining } = collapseForPreview(lines, false, {
+      previewLines: 10,
+      expandedPreviewMaxLines: 4000,
+    });
+    expect(shown).toHaveLength(10);
+    expect(remaining).toBe(10);
+  });
+});
+
+describe("moreHint", () => {
+  test("returns a muted hint when lines were hidden", () => {
+    expect(moreHint(3, theme)).toBe("<muted>… (3 more lines)</muted>");
+  });
+
+  test("singular for a single hidden line", () => {
+    expect(moreHint(1, theme)).toBe("<muted>… (1 more line)</muted>");
+  });
+
+  test("returns empty string when nothing was hidden", () => {
+    expect(moreHint(0, theme)).toBe("");
+    expect(moreHint(-2, theme)).toBe("");
   });
 });
 

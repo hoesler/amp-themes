@@ -30,10 +30,10 @@ import type { Component } from "@earendil-works/pi-tui";
 import { getConfig } from "./amp-tool-config.js";
 import {
   buildHeaderLine,
+  collapseForPreview,
   countLines,
   extractTextOutput,
-  getExpandedPreviewLineLimit,
-  previewLines,
+  moreHint,
   type RenderTheme,
   shortenPath,
   splitLines,
@@ -43,8 +43,9 @@ import {
 
 /** Append a `… (N more line(s))` hint to `parts` when lines were hidden. */
 function pushMoreHint(parts: string[], remaining: number, theme: RenderTheme): void {
-  if (remaining > 0) {
-    parts.push(theme.fg("muted", `… (${remaining} more line${remaining === 1 ? "" : "s"})`));
+  const hint = moreHint(remaining, theme);
+  if (hint) {
+    parts.push(hint);
   }
 }
 
@@ -76,10 +77,7 @@ export function buildEditResultText(
 ): string {
   const config = getConfig();
   const lines = colored.split("\n");
-  const limit = options.expanded
-    ? getExpandedPreviewLineLimit(lines, config)
-    : config.previewLines;
-  const { shown, remaining } = previewLines(lines, limit);
+  const { shown, remaining } = collapseForPreview(lines, options.expanded, config);
 
   const parts: string[] = [];
   if (shown.length > 0 && shown.some((line) => line.length > 0)) {
@@ -147,10 +145,7 @@ export function buildWriteResultText(
   );
 
   const lines = splitLines(content);
-  const limit = options.expanded
-    ? getExpandedPreviewLineLimit(lines, config)
-    : config.previewLines;
-  const { shown, remaining } = previewLines(lines, limit);
+  const { shown, remaining } = collapseForPreview(lines, options.expanded, config);
 
   const parts: string[] = [header];
   if (shown.length > 0) {

@@ -29,4 +29,4 @@ Git history uses Conventional Commit-style subjects such as `feat: add amp pi th
 
 ## Security & Configuration Tips
 
-Do not commit local Pi settings or credentials. Keep `.npmrc` behavior intentional; this repo uses `legacy-peer-deps=true` because current Pi package peer ranges can lag compatible runtime versions. Before publishing, confirm `npm pack --dry-run` includes `README.md`, `CHANGELOG.md`, `LICENSE`, `extensions`, `themes`, `skills`, and the bundled `pi-tool-display` dependency.
+Do not commit local Pi settings or credentials. Keep `.npmrc` behavior intentional; this repo uses `legacy-peer-deps=true` because current Pi package peer ranges can lag compatible runtime versions. Before publishing, confirm `npm pack --dry-run` includes `README.md`, `CHANGELOG.md`, `LICENSE`, `extensions`, `themes`, and `skills`.

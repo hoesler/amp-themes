@@ -25,9 +25,9 @@ import type { Component } from "@earendil-works/pi-tui";
 import { getConfig } from "./amp-tool-config.js";
 import {
   buildHeaderLine,
+  collapseForPreview,
   extractTextOutput,
-  getExpandedPreviewLineLimit,
-  previewLines,
+  moreHint,
   shortenPath,
   splitLines,
   truncationHint,
@@ -48,17 +48,15 @@ function buildResultText(
 ): string {
   const config = getConfig();
   const lines = splitLines(output);
-  const limit = options.expanded
-    ? getExpandedPreviewLineLimit(lines, config)
-    : config.previewLines;
-  const { shown, remaining } = previewLines(lines, limit);
+  const { shown, remaining } = collapseForPreview(lines, options.expanded, config);
 
   const parts: string[] = [];
   if (shown.length > 0) {
     parts.push(theme.fg("toolOutput", shown.join("\n")));
   }
-  if (remaining > 0) {
-    parts.push(theme.fg("muted", `… (${remaining} more line${remaining === 1 ? "" : "s"})`));
+  const hint = moreHint(remaining, theme);
+  if (hint) {
+    parts.push(hint);
   }
   if (truncation) {
     parts.push(truncation);
