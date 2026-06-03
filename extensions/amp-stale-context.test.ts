@@ -334,7 +334,7 @@ test("amp editor keeps working message ordered while tools are active", () => {
   expect(workingMessages).toEqual(["Streaming response...", "Running tools...", "Waiting for response..."]);
 });
 
-test("amp editor renders working status with an Esc cancel hint", () => {
+test("amp editor renders working status without a cancel hint", () => {
   const { pi, handlers } = createPiStub(() => "medium");
 
   ampEditorExtension(pi);
@@ -378,7 +378,9 @@ test("amp editor renders working status with an Esc cancel hint", () => {
     { matches: () => false },
   );
 
-  expect(editor.render(200).join("\n")).toContain("[accent]Esc[muted] to cancel");
+  const rendered = editor.render(200).join("\n");
+  expect(rendered).toContain("Waiting for response");
+  expect(rendered).not.toContain("to cancel");
 });
 
 test("amp editor applies the theme text color to typed input", () => {
@@ -469,11 +471,11 @@ test("amp editor uses latest context and cost after reload", () => {
     { matches: () => false },
   );
 
-  expect(editor.render(100).join("\n")).toMatch(/\$1\.23 · ⚡high/);
+  expect(editor.render(100).join("\n")).toMatch(/\$1\.23 · ↯high/);
 
   sessionStart({ type: "session_start", reason: "reload" }, createCtx(72, 16.37));
 
-  expect(editor.render(100).join("\n")).toMatch(/\$16\.37 · ⚡high/);
+  expect(editor.render(100).join("\n")).toMatch(/\$16\.37 · ↯high/);
 });
 
 test("amp editor border follows the runtime border color function", () => {
@@ -568,7 +570,7 @@ test("amp editor uses runtime thinking level after resume when session has no th
     { matches: () => false },
   );
 
-  expect(editor.render(80).join("\n")).toMatch(/⚡high/);
+  expect(editor.render(80).join("\n")).toMatch(/↯high/);
 });
 
 test("amp user message follows thinking_level_select changes after session start", () => {

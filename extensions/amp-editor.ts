@@ -46,6 +46,7 @@ function getGitInfo(cwd: string): GitInfo {
 }
 
 function formatCost(value: number): string {
+  if (value === 0) return "$0.000";
   if (value >= 1) return `$${value.toFixed(2)}`;
   if (value >= 0.001) return `$${value.toFixed(3)}`;
   return `$${value.toFixed(4)}`;
@@ -56,8 +57,7 @@ export function formatStatusTopRight(input: {
   thinking: string;
   fg: (color: ThemeColor, text: string) => string;
 }): string {
-  const thinkingPart = `${input.fg("accent", "⚡")}${input.fg(thinkingColorFor(input.thinking), input.thinking)}`;
-  if (input.cost <= 0) return thinkingPart;
+  const thinkingPart = input.fg(thinkingColorFor(input.thinking), `↯${input.thinking}`);
   return `${input.fg("muted", formatCost(input.cost))} ${input.fg("dim", "·")} ${thinkingPart}`;
 }
 
@@ -190,8 +190,7 @@ class AmpEditor extends CustomEditor {
     const working = this.getWorkingState();
     if (!working.active) return "";
 
-    const cancelHint = `${this.fg("accent", "Esc")}${this.fg("muted", " to cancel")}`;
-    return `${this.fg("accent", working.frame)} ${this.fg("text", working.message)}  ${cancelHint}`;
+    return `${this.fg("accent", working.frame)} ${this.fg("text", working.message)}`;
   }
 
   private borderRow(width: number, open: string, close: string, left: string, right: string): string {
@@ -233,8 +232,8 @@ class AmpEditor extends CustomEditor {
     const innerWidth = Math.max(0, width - 2);
     const maxLeft = Math.max(0, Math.floor(innerWidth * 0.44));
     const maxRight = Math.max(0, innerWidth - maxLeft - 2);
-    const left = this.fg("muted", truncateToWidth(leftLabel, maxLeft, "…"));
-    const right = truncateToWidth(rightLabel, maxRight, "…");
+    const left = leftLabel ? this.fg("muted", truncateToWidth(leftLabel, maxLeft, "…")) : "";
+    const right = rightLabel ? ` ${truncateToWidth(rightLabel, Math.max(0, maxRight - 2), "…")} ` : "";
     return this.borderRow(width, "╭", "╮", left, right);
   }
 
