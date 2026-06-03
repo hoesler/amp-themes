@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Rework the status-bar layout: session cost sits alone on the top-left; the model id and thinking level (effort) are grouped on the top-right (e.g. `sonnet-4 · high`). Cost is always shown, even at `$0.000`.
+- Redesign the working-status copy into terse, hook-accurate phases: **Waiting** (request sent, awaiting the model), **Thinking** (reasoning — detected from the `thinking_*` assistant stream events), **Streaming** (text output), and **Using tools** (tool execution).
+- Drop the thinking-level lightning glyph and the "Esc to cancel" hint.
+- Fix Pi's built-in working row not hiding: use `setWorkingVisible(false)` (the official 0.78 row toggle) instead of `setWorkingIndicator({ frames: [] })`, which only suppresses the spinner animation.
+- Tint the thinking level by effort (low→green, medium→cyan, high→orange, xhigh→red).
+
 ## 0.3.0
 
 - Auto-switch between `amp-dark` and `amp-light` to follow the device appearance: detected via the macOS system setting (`AppleInterfaceStyle`) with an OSC 11 terminal-background parser as a fallback. Re-checked on session start and before every agent turn.
