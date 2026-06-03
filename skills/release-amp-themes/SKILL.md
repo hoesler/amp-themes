@@ -42,11 +42,7 @@ Read the `npm pack --dry-run` output. Confirm these are present:
 - `skills/`
 - bundled `pi-tool-display`
 
-Confirm repo-only screenshots are absent unless intentionally packaged:
-
-```text
-screenshots/amp-gruvbox-dark-hard.png
-```
+Confirm repo-only screenshots are absent unless intentionally packaged.
 
 4. Commit all intended release changes:
 

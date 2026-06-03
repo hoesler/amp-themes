@@ -1,13 +1,13 @@
 ---
 name: configure-amp-themes
-description: Use when configuring, installing, updating, troubleshooting, or switching themes for the amp-themes Pi UI package, especially amp-dark, amp-light, amp-gruvbox-dark-hard, or conflicts with pi-tool-display.
+description: Use when configuring, installing, updating, troubleshooting, or switching themes for the amp-themes Pi UI package, especially amp-dark, amp-light, or conflicts with pi-tool-display.
 ---
 
 # Configure amp-themes
 
 ## Overview
 
-`amp-themes` is a Pi UI package. It provides Amp-style editor chrome, bundled compact tool display, and theme files such as `amp-dark`, `amp-light`, and `amp-gruvbox-dark-hard`.
+`amp-themes` is a Pi UI package. It provides Amp-style editor chrome, bundled compact tool display, and theme files `amp-dark` and `amp-light` that auto-switch to follow device appearance.
 
 Goal: make the package load once, avoid renderer conflicts, and set the intended theme.
 
@@ -85,7 +85,6 @@ For interactive UI verification, start Pi and check startup resources show:
 [Themes]
   amp-dark
   amp-light
-  amp-gruvbox-dark-hard
 ```
 
 The editor should show a rounded bottom input area with context usage, model id, thinking level, cwd, and branch.
@@ -95,12 +94,12 @@ The editor should show a rounded bottom input area with context usage, model id,
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Tool renderer conflict | `npm:pi-tool-display` loaded separately | `pi remove npm:pi-tool-display` |
-| Theme not found | Old theme name or package not installed | Use `amp-dark`, `amp-light`, or `amp-gruvbox-dark-hard`; run `pi install npm:amp-themes` |
+| Theme not found | Old theme name or package not installed | Use `amp-dark` or `amp-light`; run `pi install npm:amp-themes` |
 | Editor chrome not showing | Extension disabled or package filtered | Check `pi list` and `~/.pi/agent/settings.json` package filters |
-| Old `amp-agent` theme missing | Theme was renamed before general use | Set theme to `amp-dark`, `amp-light`, or `amp-gruvbox-dark-hard` |
+| Old `amp-agent` theme missing | Theme was renamed before general use | Set theme to `amp-dark` or `amp-light` |
 
 ## Do not
 
 - Do not install standalone `npm:pi-tool-display` together with `amp-themes`.
 - Do not keep old `packages/amp-agent-ui` in settings.
-- Do not set theme to `amp-agent`; use `amp-dark`, `amp-light`, or `amp-gruvbox-dark-hard`.
+- Do not set theme to `amp-agent`; use `amp-dark` or `amp-light`.

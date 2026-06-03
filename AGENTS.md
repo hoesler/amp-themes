@@ -4,7 +4,7 @@ Maintainer: Frank.
 
 ## Project Structure & Module Organization
 
-This package ships an Amp-inspired Pi UI bundle. Theme assets live in `themes/`, currently `themes/amp-gruvbox-dark-hard.json`. Pi extension code lives in `extensions/`, including editor chrome and user message rendering. Agent-facing setup guidance lives in `skills/configure-amp-themes/SKILL.md`. Package metadata, Pi registration, and scripts are in `package.json`; TypeScript settings are in `tsconfig.json`.
+This package ships an Amp-inspired Pi UI bundle. Theme assets live in `themes/`, currently `themes/amp-dark.json` and `themes/amp-light.json`. Pi extension code lives in `extensions/`, including editor chrome and user message rendering. Agent-facing setup guidance lives in `skills/configure-amp-themes/SKILL.md`. Package metadata, Pi registration, and scripts are in `package.json`; TypeScript settings are in `tsconfig.json`.
 
 ## Build, Test, and Development Commands
 
@@ -17,7 +17,7 @@ This package ships an Amp-inspired Pi UI bundle. Theme assets live in `themes/`,
 
 ## Coding Style & Naming Conventions
 
-Use TypeScript ESM and strict typing for extension code. Keep indentation at two spaces in TypeScript and JSON. Prefer small helper functions near the behavior they support, and keep Pi API integration in extension entrypoints. Use descriptive kebab-case filenames for package-facing assets, such as `amp-gruvbox-dark-hard.json`, and `amp-*` names for bundled Pi extensions.
+Use TypeScript ESM and strict typing for extension code. Keep indentation at two spaces in TypeScript and JSON. Prefer small helper functions near the behavior they support, and keep Pi API integration in extension entrypoints. Use descriptive kebab-case filenames for package-facing assets, such as `amp-dark.json`, and `amp-*` names for bundled Pi extensions.
 
 ## Testing Guidelines
 
