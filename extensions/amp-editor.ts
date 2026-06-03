@@ -7,8 +7,6 @@ import { relative } from "node:path";
 
 const MIN_BODY_LINES = 2;
 const GIT_CACHE_MS = 2000;
-const STATUS_LEFT_INSET = 1;
-const STATUS_RIGHT_INSET = 1;
 const WORKING_FRAMES = ["~", "≈", "≋"];
 
 type WorkingState = {
@@ -203,14 +201,11 @@ class AmpEditor extends CustomEditor {
       thinking: this.getThinkingLevel(),
       fg: (c, t) => this.fg(c, t),
     });
-    const cwdLabel = this.getCwdLabel();
-    const workingLabel = this.getWorkingLabel();
 
     return [
       this.borderWithLabels(width, "", rightTop),
       ...body.map((line) => this.wrapBody(line, innerWidth)),
-      this.borderWithRightLabel(width, cwdLabel),
-      ...this.statusRows(width, workingLabel, ""),
+      this.bottomBorderWithStatus(width, this.getWorkingLabel(), this.getCwdLabel()),
       ...this.wrapPopupBlock(popupLines, width),
     ];
   }
@@ -228,15 +223,12 @@ class AmpEditor extends CustomEditor {
     return `${this.fg("accent", working.frame)} ${this.fg("text", working.message)}  ${cancelHint}`;
   }
 
-  private getGitChangesLabel(): string {
-    const git = getGitInfo(this.ctx.cwd);
-    if (git.changedFiles === 0) return "";
-
-    const fileLabel = this.fg("muted", `${git.changedFiles} ${git.changedFiles === 1 ? "file" : "files"} changed`);
-    const added = git.added > 0 ? ` ${this.fg("toolDiffAdded", `+${git.added}`)}` : "";
-    const modified = git.modified > 0 ? ` ${this.fg("warning", `~${git.modified}`)}` : "";
-    const removed = git.removed > 0 ? ` ${this.fg("toolDiffRemoved", `-${git.removed}`)}` : "";
-    return `${fileLabel}${added}${modified}${removed}`;
+  private bottomBorderWithStatus(width: number, leftLabel: string, rightLabel: string): string {
+    const innerWidth = Math.max(0, width - 2);
+    const left = leftLabel ? ` ${truncateToWidth(leftLabel, Math.max(0, Math.floor(innerWidth * 0.5)), "…")} ` : "";
+    const right = rightLabel ? ` ${this.fg("muted", truncateToWidth(rightLabel, Math.max(0, innerWidth - visibleWidth(left) - 2), "…"))} ` : "";
+    const fill = Math.max(0, innerWidth - visibleWidth(left) - visibleWidth(right));
+    return this.borderColor("╰") + left + this.borderColor("─".repeat(fill)) + right + this.borderColor("╯");
   }
 
   private fg(color: ThemeColor, text: string): string {
@@ -260,20 +252,6 @@ class AmpEditor extends CustomEditor {
     });
   }
 
-  private statusRows(width: number, leftLabel: string, rightLabel: string): string[] {
-    if (!leftLabel && !rightLabel) return [];
-
-    const contentWidth = Math.max(1, width - STATUS_LEFT_INSET - STATUS_RIGHT_INSET);
-    const maxLeft = Math.max(0, Math.floor(contentWidth * 0.44));
-    const maxRight = Math.max(0, contentWidth - maxLeft - 2);
-    const left = truncateToWidth(leftLabel, maxLeft, "…");
-    const right = truncateToWidth(rightLabel, maxRight, "…");
-    const gap = " ".repeat(Math.max(1, contentWidth - visibleWidth(left) - visibleWidth(right)));
-    const leftPadding = " ".repeat(Math.min(STATUS_LEFT_INSET, Math.max(0, width - contentWidth)));
-    const rightPadding = " ".repeat(Math.min(STATUS_RIGHT_INSET, Math.max(0, width - contentWidth - visibleWidth(leftPadding))));
-    return [`${leftPadding}${left}${gap}${right}${rightPadding}`];
-  }
-
   private borderWithLabels(width: number, leftLabel: string, rightLabel: string): string {
     const innerWidth = Math.max(0, width - 2);
     const maxLeft = Math.max(0, Math.floor(innerWidth * 0.44));
@@ -287,13 +265,6 @@ class AmpEditor extends CustomEditor {
 
   private sideBorder(): string {
     return this.borderColor("│");
-  }
-
-  private borderWithRightLabel(width: number, label: string): string {
-    const innerWidth = Math.max(0, width - 2);
-    const right = this.fg("muted", truncateToWidth(label, Math.max(0, innerWidth - 2), "…"));
-    const fill = Math.max(0, innerWidth - visibleWidth(right));
-    return this.borderColor("╰") + this.borderColor("─".repeat(fill)) + right + this.borderColor("╯");
   }
 }
 
