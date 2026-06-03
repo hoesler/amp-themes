@@ -207,6 +207,7 @@ test("amp editor working message waits until assistant update before streaming",
       theme: createThemeStub(),
       setEditorComponent() {},
       setWorkingIndicator() {},
+      setWorkingVisible() {},
       setWorkingMessage(message?: string) {
         workingMessages.push(message);
       },
@@ -262,7 +263,7 @@ test("amp editor shows running tools while tool execution is active", () => {
 
 test("amp editor hides Pi's built-in working row during agent start", () => {
   const { pi, handlers } = createPiStub(() => "medium");
-  const indicatorCalls: Array<{ frames?: string[] }> = [];
+  const visibleCalls: boolean[] = [];
   const ctx = {
     hasUI: true,
     cwd: "/tmp",
@@ -277,9 +278,10 @@ test("amp editor hides Pi's built-in working row during agent start", () => {
     ui: {
       theme: createThemeStub(),
       setEditorComponent() {},
-      setWorkingIndicator(options?: { frames?: string[] }) {
-        indicatorCalls.push(options ?? {});
+      setWorkingVisible(visible: boolean) {
+        visibleCalls.push(visible);
       },
+      setWorkingIndicator() {},
       setWorkingMessage() {},
       setFooter() {},
     },
@@ -295,8 +297,8 @@ test("amp editor hides Pi's built-in working row during agent start", () => {
   beforeAgentStart({ type: "before_agent_start" }, ctx);
   agentStart({ type: "agent_start" }, ctx);
 
-  // Each call to hideBuiltInWorking passes { frames: [] } via the official API.
-  expect(indicatorCalls).toEqual([{ frames: [] }, { frames: [] }, { frames: [] }]);
+  // hideBuiltInWorking is invoked on session_start, before_agent_start, and agent_start.
+  expect(visibleCalls).toEqual([false, false, false]);
 });
 
 test("amp editor keeps working message ordered while tools are active", () => {
@@ -412,6 +414,7 @@ test("amp editor applies the theme text color to typed input", () => {
           editorFactory = factory;
         },
         setWorkingIndicator() {},
+        setWorkingVisible() {},
         setWorkingMessage() {},
         setFooter() {},
       },
@@ -457,6 +460,7 @@ test("amp editor uses latest context and cost after reload", () => {
         editorFactory = factory;
       },
       setWorkingIndicator() {},
+      setWorkingVisible() {},
       setWorkingMessage() {},
       setFooter() {},
     },
@@ -471,11 +475,11 @@ test("amp editor uses latest context and cost after reload", () => {
     { matches: () => false },
   );
 
-  expect(editor.render(100).join("\n")).toMatch(/\$1\.23 · ↯high/);
+  expect(editor.render(100).join("\n")).toMatch(/\$1\.23 · high/);
 
   sessionStart({ type: "session_start", reason: "reload" }, createCtx(72, 16.37));
 
-  expect(editor.render(100).join("\n")).toMatch(/\$16\.37 · ↯high/);
+  expect(editor.render(100).join("\n")).toMatch(/\$16\.37 · high/);
 });
 
 test("amp editor border follows the runtime border color function", () => {
@@ -508,6 +512,7 @@ test("amp editor border follows the runtime border color function", () => {
           editorFactory = factory;
         },
         setWorkingIndicator() {},
+        setWorkingVisible() {},
         setWorkingMessage() {},
         setFooter() {},
       },
@@ -556,6 +561,7 @@ test("amp editor uses runtime thinking level after resume when session has no th
           editorFactory = factory;
         },
         setWorkingIndicator() {},
+        setWorkingVisible() {},
         setWorkingMessage() {},
         setFooter() {},
       },
@@ -570,7 +576,7 @@ test("amp editor uses runtime thinking level after resume when session has no th
     { matches: () => false },
   );
 
-  expect(editor.render(80).join("\n")).toMatch(/↯high/);
+  expect(editor.render(80).join("\n")).toMatch(/· high/);
 });
 
 test("amp user message follows thinking_level_select changes after session start", () => {
@@ -740,6 +746,7 @@ test("amp editor render stays safe after pi runtime becomes stale", () => {
           editorFactory = factory;
         },
         setWorkingIndicator() {},
+        setWorkingVisible() {},
         setWorkingMessage() {},
         setFooter() {},
       },

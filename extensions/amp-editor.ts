@@ -57,7 +57,7 @@ export function formatStatusTopRight(input: {
   thinking: string;
   fg: (color: ThemeColor, text: string) => string;
 }): string {
-  const thinkingPart = input.fg(thinkingColorFor(input.thinking), `↯${input.thinking}`);
+  const thinkingPart = input.fg(thinkingColorFor(input.thinking), input.thinking);
   return `${input.fg("muted", formatCost(input.cost))} ${input.fg("dim", "·")} ${thinkingPart}`;
 }
 
@@ -103,8 +103,11 @@ function getSessionCost(ctx: ExtensionContext): number {
 }
 
 function hideBuiltInWorking(ctx: ExtensionContext): void {
-  // Official API (Pi >= 0.75): an empty frames array hides the built-in working row.
-  ctx.ui.setWorkingIndicator({ frames: [] });
+  // Hide Pi's built-in working loader row entirely (official typed API in 0.78);
+  // we render our own status on the editor border. Note: setWorkingIndicator({frames:[]})
+  // only suppresses the spinner animation, not the message row — setWorkingVisible(false)
+  // is what removes the row.
+  ctx.ui.setWorkingVisible(false);
 }
 
 class AmpEditor extends CustomEditor {
