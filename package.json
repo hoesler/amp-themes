@@ -32,7 +32,7 @@
     "extensions": [
       "./extensions/amp-appearance.ts",
       "./extensions/amp-editor.ts",
-      "./node_modules/pi-tool-display/index.ts",
+      "./extensions/amp-tool-display.ts",
       "./extensions/amp-user-message.ts"
     ],
     "themes": [
@@ -42,12 +42,6 @@
       "./skills"
     ]
   },
-  "dependencies": {
-    "pi-tool-display": "^0.3.3"
-  },
-  "bundledDependencies": [
-    "pi-tool-display"
-  ],
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*"
