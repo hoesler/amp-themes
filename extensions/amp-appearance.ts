@@ -15,6 +15,33 @@ export function detectAppearance(probes: AppearanceProbes): Appearance {
   return probes.override ?? probes.mac() ?? probes.osc() ?? "dark";
 }
 
+const OSC11_REPLY = /\x1b\]11;rgb:([0-9a-f]{2,4})\/([0-9a-f]{2,4})\/([0-9a-f]{2,4})/i;
+
+function channel(hex: string): number {
+  // Normalize 1-4 hex digits to 0..1.
+  const max = (1 << (hex.length * 4)) - 1;
+  return parseInt(hex, 16) / max;
+}
+
+export function appearanceFromOscReply(reply: string): Appearance | null {
+  const m = OSC11_REPLY.exec(reply);
+  if (!m) return null;
+  // Rec. 601 luma; >0.5 is a light background.
+  const luma = 0.299 * channel(m[1]!) + 0.587 * channel(m[2]!) + 0.114 * channel(m[3]!);
+  return luma > 0.5 ? "light" : "dark";
+}
+
+/** Best-effort OSC 11 query. Returns null unless stdin/stdout are a TTY and a reply
+ * arrives quickly. Intentionally conservative: any doubt → null (caller falls back). */
+export function oscAppearanceProbe(): Appearance | null {
+  const { stdin, stdout } = process;
+  if (!stdin.isTTY || !stdout.isTTY) return null;
+  // NOTE: Pi owns stdin in raw mode. A live synchronous read here is unsafe, so this
+  // probe only answers when an OSC 11 reply was already captured by the extension's
+  // input observer (future follow-up). Standalone, it returns null.
+  return null;
+}
+
 /** macOS: `defaults read -g AppleInterfaceStyle` prints "Dark" in dark mode and
  * errors (key absent) in light mode. Returns null off macOS. */
 export function macAppearanceProbe(): Appearance | null {
