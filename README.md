@@ -1,8 +1,6 @@
 # amp-themes
 
-[Amp](https://ampcode.com)-inspired UI for [Pi](https://pi.dev): Amp dark/light themes, a Gruvbox dark theme, rounded editor chrome, synchronized thinking-level colors, compact user messages, and bundled compact tool rendering.
-
-![amp-gruvbox-dark-hard screenshot](https://raw.githubusercontent.com/me-frankan/amp-themes/main/screenshots/amp-gruvbox-dark-hard.png)
+[Amp](https://ampcode.com)-inspired UI for [Pi](https://pi.dev): Amp dark/light themes that auto-switch to follow device appearance, rounded editor chrome, synchronized thinking-level colors, compact user messages, and bundled compact tool rendering.
 
 ## Install
 
@@ -22,7 +20,7 @@ If `npm:pi-tool-display` is installed separately, remove it. `amp-themes` alread
 
 ## Includes
 
-- `amp-dark`, `amp-light`, and `amp-gruvbox-dark-hard` themes
+- `amp-dark` and `amp-light` themes (auto-switching to follow the device appearance)
 - Amp-style editor chrome with context, cost, model, thinking level, cwd, branch, and git change summary
 - Working status integrated into the editor status row, with git changes kept on the right
 - Compact Amp-style user messages with thinking-level color sync
