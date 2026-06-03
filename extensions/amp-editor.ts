@@ -69,16 +69,12 @@ export function compactModelId(modelId: string, maxWidth: number): string {
 
 export function formatStatusTopRight(input: {
   model: string;
-  cost: number;
   thinking: string;
   fg: (color: ThemeColor, text: string) => string;
 }): string {
-  const sep = ` ${input.fg("dim", "·")} `;
-  const parts: string[] = [];
-  if (input.model) parts.push(input.fg("muted", input.model));
-  parts.push(input.fg("muted", formatCost(input.cost)));
-  parts.push(input.fg(thinkingColorFor(input.thinking), input.thinking));
-  return parts.join(sep);
+  const thinkingPart = input.fg(thinkingColorFor(input.thinking), input.thinking);
+  if (!input.model) return thinkingPart;
+  return `${input.fg("muted", input.model)} ${input.fg("dim", "·")} ${thinkingPart}`;
 }
 
 function compactPath(cwd: string): string {
@@ -191,15 +187,15 @@ class AmpEditor extends CustomEditor {
     }
 
     const modelId = this.ctx.model?.id ?? "";
+    const leftTop = formatCost(getSessionCost(this.ctx));
     const rightTop = formatStatusTopRight({
       model: modelId ? compactModelId(modelId, Math.max(8, Math.floor(innerWidth * 0.3))) : "",
-      cost: getSessionCost(this.ctx),
       thinking: this.getThinkingLevel(),
       fg: (c, t) => this.fg(c, t),
     });
 
     return [
-      this.borderWithLabels(width, "", rightTop),
+      this.borderWithLabels(width, leftTop, rightTop),
       ...body.map((line) => this.wrapBody(line, innerWidth)),
       this.bottomBorderWithStatus(width, this.getWorkingLabel(), this.getCwdLabel()),
       ...this.wrapPopupBlock(popupLines, width),
@@ -257,7 +253,7 @@ class AmpEditor extends CustomEditor {
     const innerWidth = Math.max(0, width - 2);
     const maxLeft = leftLabel ? Math.max(0, Math.floor(innerWidth * 0.44)) : 0;
     const maxRight = Math.max(0, innerWidth - maxLeft - 2);
-    const left = leftLabel ? this.fg("muted", truncateToWidth(leftLabel, maxLeft, "…")) : "";
+    const left = leftLabel ? ` ${this.fg("muted", truncateToWidth(leftLabel, Math.max(0, maxLeft - 2), "…"))} ` : "";
     const right = rightLabel ? ` ${truncateToWidth(rightLabel, Math.max(0, maxRight - 2), "…")} ` : "";
     return this.borderRow(width, "╭", "╮", left, right);
   }

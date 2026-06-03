@@ -486,11 +486,11 @@ test("amp editor uses latest context and cost after reload", () => {
     { matches: () => false },
   );
 
-  expect(editor.render(100).join("\n")).toMatch(/\$1\.23 · high/);
+  expect(editor.render(100).join("\n")).toContain("$1.23");
 
   sessionStart({ type: "session_start", reason: "reload" }, createCtx(72, 16.37));
 
-  expect(editor.render(100).join("\n")).toMatch(/\$16\.37 · high/);
+  expect(editor.render(100).join("\n")).toContain("$16.37");
 });
 
 test("amp editor border follows the runtime border color function", () => {
