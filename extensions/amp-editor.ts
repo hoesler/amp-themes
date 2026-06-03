@@ -17,10 +17,6 @@ type WorkingState = {
 
 type GitInfo = {
   branch: string | null;
-  changedFiles: number;
-  added: number;
-  modified: number;
-  removed: number;
 };
 
 let gitCache: { cwd: string; at: number; info: GitInfo } | undefined;
@@ -43,22 +39,7 @@ function getGitInfo(cwd: string): GitInfo {
   if (gitCache && gitCache.cwd === cwd && now - gitCache.at < GIT_CACHE_MS) return gitCache.info;
 
   const branch = runGit(cwd, ["branch", "--show-current"]) || null;
-  const porcelain = runGit(cwd, ["status", "--short"]);
-  const changedFiles = porcelain ? porcelain.split("\n").filter(Boolean).length : 0;
-  const numstat = runGit(cwd, ["diff", "--numstat"]);
-  let added = 0;
-  let removed = 0;
-
-  for (const line of numstat.split("\n")) {
-    const [a, r] = line.split("\t");
-    const add = Number(a);
-    const rem = Number(r);
-    if (Number.isFinite(add)) added += add;
-    if (Number.isFinite(rem)) removed += rem;
-  }
-
-  const modified = Math.min(added, removed);
-  const info = { branch, changedFiles, added: added - modified, modified, removed: removed - modified };
+  const info = { branch };
   gitCache = { cwd, at: now, info };
   return info;
 }
@@ -212,7 +193,7 @@ class AmpEditor extends CustomEditor {
 
   private getCwdLabel(): string {
     const git = getGitInfo(this.ctx.cwd);
-    return ` ${compactPath(this.ctx.cwd)}${git.branch ? ` (${git.branch})` : ""} `;
+    return `${compactPath(this.ctx.cwd)}${git.branch ? ` (${git.branch})` : ""}`;
   }
 
   private getWorkingLabel(): string {
