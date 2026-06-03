@@ -1,6 +1,6 @@
 {
   "name": "amp-themes",
-  "version": "0.2.17",
+  "version": "0.3.0",
   "description": "Amp-inspired Pi UI suite: theme, editor chrome, and compact tool display.",
   "keywords": [
     "pi-package",

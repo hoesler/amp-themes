@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+- Auto-switch between `amp-dark` and `amp-light` to follow the device appearance: detected via the macOS system setting (`AppleInterfaceStyle`) with an OSC 11 terminal-background parser as a fallback. Re-checked on session start and before every agent turn.
+- Add an `AMP_APPEARANCE` environment variable (`dark` or `light`) to force the appearance, overriding auto-detection.
+- Remove the `amp-gruvbox-dark-hard` theme; the suite is now a single auto-switching `amp` theme (dark/light).
+- Rework the editor chrome to match Amp: the top-right shows `$cost · ⚡<thinking-level>` (model id and context percentage removed), the live agent working status moves onto the bottom-left border, and `cwd (branch)` stays on the bottom-right. The git change summary is removed.
+- Hide Pi's built-in working row via the official `setWorkingIndicator` API instead of an unofficial cast.
+- Stop computing unused git change statistics on every render.
+- Upgrade Pi peer/dev dependencies to 0.78.
+
 ## 0.2.17
 
 - Move amp-themes extension imports and Pi peer/development dependencies to the new `@earendil-works` package namespace.
