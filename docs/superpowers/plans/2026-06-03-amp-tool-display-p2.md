@@ -338,14 +338,14 @@ git commit -m "feat: web/MCP tool rendering; drop pi-tool-display from metadata 
 
 ---
 
-## Task 7: Release 0.5.0
+## Task 7: Release 0.4.1
 
 **Files:**
 - Modify: `package.json`, `CHANGELOG.md`
 
 - [ ] **Step 1: Full release gate** — `npm run release:check` (all green).
-- [ ] **Step 2: Bump `version` to `0.5.0`; prepend a CHANGELOG `## 0.5.0` entry** describing: self-authored Amp-style per-tool rendering (read/grep/find/ls/bash/edit/write + web/MCP), `pi-tool-display` removed (no longer bundled; legacy `@mariozechner` coupling gone), uncovered tools fall back to Pi's default rendering, no multi-tool grouping (Pi API limitation).
-- [ ] **Step 3: Commit** `chore: release 0.5.0`.
+- [ ] **Step 2: Bump `version` to `0.4.1`; prepend a CHANGELOG `## 0.4.1` entry** describing: self-authored Amp-style per-tool rendering (read/grep/find/ls/bash/edit/write + web/MCP), `pi-tool-display` removed (no longer bundled; legacy `@mariozechner` coupling gone), uncovered tools fall back to Pi's default rendering, no multi-tool grouping (Pi API limitation).
+- [ ] **Step 3: Commit** `chore: release 0.4.1`.
 - [ ] **Step 4: Hand off** via `superpowers:finishing-a-development-branch` (merge to main, then npm publish with the user's passkey/automation token, tag, GitHub release).
 
 ---
