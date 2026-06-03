@@ -81,7 +81,12 @@ function syncTheme(ctx: ExtensionContext): void {
     osc: oscAppearanceProbe,
   });
   const target = THEME_FOR[appearance];
-  if (active !== target) ctx.ui.setTheme(target);
+  if (active !== target) {
+    const result = ctx.ui.setTheme(target);
+    if (!result.success) {
+      ctx.ui.notify(`amp-appearance: could not switch to ${target}${result.error ? `: ${result.error}` : ""}`, "warning");
+    }
+  }
 }
 
 export default function (pi: ExtensionAPI): void {
