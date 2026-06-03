@@ -32,14 +32,10 @@ export function appearanceFromOscReply(reply: string): Appearance | null {
   return luma > 0.5 ? "light" : "dark";
 }
 
-/** Best-effort OSC 11 query. Returns null unless stdin/stdout are a TTY and a reply
- * arrives quickly. Intentionally conservative: any doubt → null (caller falls back). */
 export function oscAppearanceProbe(): Appearance | null {
-  const { stdin, stdout } = process;
-  if (!stdin.isTTY || !stdout.isTTY) return null;
-  // NOTE: Pi owns stdin in raw mode. A live synchronous read here is unsafe, so this
-  // probe only answers when an OSC 11 reply was already captured by the extension's
-  // input observer (future follow-up). Standalone, it returns null.
+  // Pi owns stdin in raw mode, so a live OSC 11 round-trip is unsafe for now.
+  // This stays a no-op stub until a safe stdin-observer path lands; the parser
+  // (appearanceFromOscReply) is unit-tested and ready for it.
   return null;
 }
 

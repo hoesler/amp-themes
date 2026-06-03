@@ -1,6 +1,7 @@
 import { CustomEditor, type ExtensionAPI, type ExtensionContext, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { BUILTIN_COMMAND_PALETTE_ITEMS, CommandPaletteOverlay, type CommandPaletteItem, type CommandPaletteResult, stripAnsi } from "./amp-command-palette.js";
+import { thinkingColorFor } from "./amp-thinking.js";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { relative } from "node:path";
@@ -48,17 +49,6 @@ function formatCost(value: number): string {
   if (value >= 1) return `$${value.toFixed(2)}`;
   if (value >= 0.001) return `$${value.toFixed(3)}`;
   return `$${value.toFixed(4)}`;
-}
-
-export function thinkingColorFor(level: string): ThemeColor {
-  switch (level) {
-    case "minimal": return "thinkingMinimal";
-    case "low": return "thinkingLow";
-    case "medium": return "thinkingMedium";
-    case "high": return "thinkingHigh";
-    case "xhigh": return "thinkingXhigh";
-    default: return "thinkingOff";
-  }
 }
 
 export function formatStatusTopRight(input: {
@@ -204,12 +194,18 @@ class AmpEditor extends CustomEditor {
     return `${this.fg("accent", working.frame)} ${this.fg("text", working.message)}  ${cancelHint}`;
   }
 
+  private borderRow(width: number, open: string, close: string, left: string, right: string): string {
+    const innerWidth = Math.max(0, width - 2);
+    const fill = Math.max(0, innerWidth - visibleWidth(left) - visibleWidth(right));
+    return this.borderColor(open) + left + this.borderColor("─".repeat(fill)) + right + this.borderColor(close);
+  }
+
   private bottomBorderWithStatus(width: number, leftLabel: string, rightLabel: string): string {
     const innerWidth = Math.max(0, width - 2);
     const left = leftLabel ? ` ${truncateToWidth(leftLabel, Math.max(0, Math.floor(innerWidth * 0.5)), "…")} ` : "";
-    const right = rightLabel ? ` ${this.fg("muted", truncateToWidth(rightLabel, Math.max(0, innerWidth - visibleWidth(left) - 2), "…"))} ` : "";
-    const fill = Math.max(0, innerWidth - visibleWidth(left) - visibleWidth(right));
-    return this.borderColor("╰") + left + this.borderColor("─".repeat(fill)) + right + this.borderColor("╯");
+    const leftWidth = visibleWidth(left);
+    const right = rightLabel ? ` ${this.fg("muted", truncateToWidth(rightLabel, Math.max(0, innerWidth - leftWidth - 2), "…"))} ` : "";
+    return this.borderRow(width, "╰", "╯", left, right);
   }
 
   private fg(color: ThemeColor, text: string): string {
@@ -239,9 +235,7 @@ class AmpEditor extends CustomEditor {
     const maxRight = Math.max(0, innerWidth - maxLeft - 2);
     const left = this.fg("muted", truncateToWidth(leftLabel, maxLeft, "…"));
     const right = truncateToWidth(rightLabel, maxRight, "…");
-    const used = visibleWidth(left) + visibleWidth(right);
-    const fill = Math.max(0, innerWidth - used);
-    return this.borderColor("╭") + left + this.borderColor("─".repeat(fill)) + right + this.borderColor("╮");
+    return this.borderRow(width, "╭", "╮", left, right);
   }
 
   private sideBorder(): string {

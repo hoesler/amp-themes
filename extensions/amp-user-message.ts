@@ -5,6 +5,7 @@ import {
   type ThemeColor,
 } from "@earendil-works/pi-coding-agent";
 import { Markdown, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { thinkingColorFor } from "./amp-thinking.js";
 
 type RenderFn = (width: number) => string[];
 type PatchableUserMessagePrototype = {
@@ -43,24 +44,6 @@ function findMarkdownText(value: unknown): string | undefined {
   }
 
   return undefined;
-}
-
-function getThinkingColor(level: string): ThemeColor {
-  switch (level) {
-    case "minimal":
-      return "thinkingMinimal";
-    case "low":
-      return "thinkingLow";
-    case "medium":
-      return "thinkingMedium";
-    case "high":
-      return "thinkingHigh";
-    case "xhigh":
-      return "thinkingXhigh";
-    case "off":
-    default:
-      return "thinkingOff";
-  }
 }
 
 function styledUserLine(line: string, width: number, theme: ThemeLike | undefined, color: ThemeColor): string {
@@ -105,7 +88,7 @@ function patchUserMessageRender(getTheme: () => ThemeLike | undefined, getThinki
     const original = prototype.__ampUserMessageOriginalRender ?? prototype.render;
     const theme = prototype.__ampUserMessageGetTheme?.();
     const thinkingLevel = prototype.__ampUserMessageGetThinkingLevel?.() ?? "off";
-    const color = getThinkingColor(thinkingLevel);
+    const color = thinkingColorFor(thinkingLevel);
     const ampLines = renderAmpUserMessage(this as PatchableUserMessagePrototype, width, theme, color);
     return ampLines ?? original.call(this, width);
   };
