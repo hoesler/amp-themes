@@ -21,8 +21,8 @@ If `npm:pi-tool-display` is installed separately, remove it. `amp-themes` alread
 ## Includes
 
 - `amp-dark` and `amp-light` themes (auto-switching to follow the device appearance; set `AMP_APPEARANCE=dark` or `AMP_APPEARANCE=light` to force)
-- Amp-style editor chrome with context, cost, model, thinking level, cwd, branch, and git change summary
-- Working status integrated into the editor status row, with git changes kept on the right
+- Amp-style editor chrome: session cost and thinking level top-right, live working status and `cwd (branch)` on the bottom border
+- Working status integrated into the editor bottom border, with cwd and branch on the right
 - Compact Amp-style user messages with thinking-level color sync
 - Bundled `pi-tool-display`
 

@@ -68,7 +68,7 @@ export function readOverride(): Appearance | null {
   return raw === "dark" || raw === "light" ? raw : null;
 }
 
-function syncTheme(ctx: ExtensionContext): void {
+export function syncTheme(ctx: ExtensionContext): void {
   if (!ctx.hasUI) return;
   // Only manage the theme when an amp theme is active; never override a user who
   // explicitly picked a non-amp theme.

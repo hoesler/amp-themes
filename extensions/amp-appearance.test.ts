@@ -1,5 +1,6 @@
 import { describe, expect, test, afterEach } from "vitest";
-import { detectAppearance, type AppearanceProbes, appearanceFromOscReply, readOverride } from "./amp-appearance.js";
+import { detectAppearance, type AppearanceProbes, appearanceFromOscReply, readOverride, syncTheme } from "./amp-appearance.js";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 function probes(overrides: Partial<AppearanceProbes>): AppearanceProbes {
   return { override: null, mac: () => null, osc: () => null, ...overrides };
@@ -56,5 +57,74 @@ describe("readOverride (AMP_APPEARANCE env var)", () => {
     expect(readOverride()).toBeNull();
     process.env.AMP_APPEARANCE = "purple";
     expect(readOverride()).toBeNull();
+  });
+});
+
+function fakeCtx(opts: {
+  hasUI?: boolean;
+  themeName?: string;
+  setThemeResult?: { success: boolean; error?: string };
+}) {
+  const calls = { setTheme: [] as string[], notify: [] as Array<[string, string | undefined]> };
+  const ctx = {
+    hasUI: opts.hasUI ?? true,
+    ui: {
+      theme: { name: opts.themeName },
+      setTheme: (name: string) => { calls.setTheme.push(name); return opts.setThemeResult ?? { success: true }; },
+      notify: (msg: string, type?: string) => { calls.notify.push([msg, type]); },
+    },
+  } as unknown as ExtensionContext;
+  return { ctx, calls };
+}
+
+describe("syncTheme", () => {
+  const originalEnv = process.env.AMP_APPEARANCE;
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.AMP_APPEARANCE;
+    else process.env.AMP_APPEARANCE = originalEnv;
+  });
+
+  test("skips entirely when !ctx.hasUI", () => {
+    process.env.AMP_APPEARANCE = "dark";
+    const { ctx, calls } = fakeCtx({ hasUI: false, themeName: "amp-dark" });
+    syncTheme(ctx);
+    expect(calls.setTheme).toHaveLength(0);
+    expect(calls.notify).toHaveLength(0);
+  });
+
+  test("skips when a non-amp theme is active", () => {
+    process.env.AMP_APPEARANCE = "dark";
+    const { ctx, calls } = fakeCtx({ hasUI: true, themeName: "some-other-theme" });
+    syncTheme(ctx);
+    expect(calls.setTheme).toHaveLength(0);
+  });
+
+  test("switches when target differs from active", () => {
+    process.env.AMP_APPEARANCE = "light";
+    const { ctx, calls } = fakeCtx({ hasUI: true, themeName: "amp-dark" });
+    syncTheme(ctx);
+    expect(calls.setTheme).toHaveLength(1);
+    expect(calls.setTheme[0]).toBe("amp-light");
+  });
+
+  test("no-op when already on the correct theme", () => {
+    process.env.AMP_APPEARANCE = "dark";
+    const { ctx, calls } = fakeCtx({ hasUI: true, themeName: "amp-dark" });
+    syncTheme(ctx);
+    expect(calls.setTheme).toHaveLength(0);
+  });
+
+  test("notifies with warning type when setTheme fails", () => {
+    process.env.AMP_APPEARANCE = "light";
+    const { ctx, calls } = fakeCtx({
+      hasUI: true,
+      themeName: "amp-dark",
+      setThemeResult: { success: false, error: "nope" },
+    });
+    syncTheme(ctx);
+    expect(calls.setTheme).toHaveLength(1);
+    expect(calls.notify).toHaveLength(1);
+    expect(calls.notify[0]![1]).toBe("warning");
+    expect(calls.notify[0]![0]).toContain("nope");
   });
 });

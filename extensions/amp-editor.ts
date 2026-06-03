@@ -45,7 +45,6 @@ function getGitInfo(cwd: string): GitInfo {
 }
 
 function formatCost(value: number): string {
-  if (value === 0) return "$0.000";
   if (value >= 1) return `$${value.toFixed(2)}`;
   if (value >= 0.001) return `$${value.toFixed(3)}`;
   return `$${value.toFixed(4)}`;
