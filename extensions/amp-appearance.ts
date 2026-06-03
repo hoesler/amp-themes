@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 export type Appearance = "dark" | "light";
 
@@ -56,4 +57,33 @@ export function macAppearanceProbe(): Appearance | null {
   } catch {
     return "light";
   }
+}
+
+const THEME_FOR: Record<Appearance, string> = { dark: "amp-dark", light: "amp-light" };
+const AMP_THEMES = new Set(Object.values(THEME_FOR));
+
+function readOverride(ctx: ExtensionContext): Appearance | null {
+  const raw = (ctx as { settings?: { get?: (k: string) => unknown } }).settings?.get?.("amp.appearance");
+  return raw === "dark" || raw === "light" ? raw : null;
+}
+
+function syncTheme(ctx: ExtensionContext): void {
+  if (!ctx.hasUI) return;
+  // Only manage the theme when an amp theme is active; never override a user who
+  // explicitly picked a non-amp theme.
+  const active = ctx.ui.theme?.name;
+  if (active && !AMP_THEMES.has(active)) return;
+
+  const appearance = detectAppearance({
+    override: readOverride(ctx),
+    mac: macAppearanceProbe,
+    osc: oscAppearanceProbe,
+  });
+  const target = THEME_FOR[appearance];
+  if (active !== target) ctx.ui.setTheme(target);
+}
+
+export default function (pi: ExtensionAPI): void {
+  pi.on("session_start", (_event, ctx) => syncTheme(ctx));
+  pi.on("before_agent_start", (_event, ctx) => syncTheme(ctx));
 }
