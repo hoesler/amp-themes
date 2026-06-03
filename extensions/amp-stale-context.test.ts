@@ -262,7 +262,7 @@ test("amp editor shows running tools while tool execution is active", () => {
 
 test("amp editor hides Pi's built-in working row during agent start", () => {
   const { pi, handlers } = createPiStub(() => "medium");
-  const visibility: boolean[] = [];
+  const indicatorCalls: Array<{ frames?: string[] }> = [];
   const ctx = {
     hasUI: true,
     cwd: "/tmp",
@@ -277,11 +277,10 @@ test("amp editor hides Pi's built-in working row during agent start", () => {
     ui: {
       theme: createThemeStub(),
       setEditorComponent() {},
-      setWorkingIndicator() {},
-      setWorkingMessage() {},
-      setWorkingVisible(visible: boolean) {
-        visibility.push(visible);
+      setWorkingIndicator(options?: { frames?: string[] }) {
+        indicatorCalls.push(options ?? {});
       },
+      setWorkingMessage() {},
       setFooter() {},
     },
   } as unknown as ExtensionContext;
@@ -296,7 +295,8 @@ test("amp editor hides Pi's built-in working row during agent start", () => {
   beforeAgentStart({ type: "before_agent_start" }, ctx);
   agentStart({ type: "agent_start" }, ctx);
 
-  expect(visibility).toEqual([false, false, false]);
+  // Each call to hideBuiltInWorking passes { frames: [] } via the official API.
+  expect(indicatorCalls).toEqual([{ frames: [] }, { frames: [] }, { frames: [] }]);
 });
 
 test("amp editor keeps working message ordered while tools are active", () => {

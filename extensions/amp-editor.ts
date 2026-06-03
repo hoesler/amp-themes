@@ -114,7 +114,8 @@ function getSessionCost(ctx: ExtensionContext): number {
 }
 
 function hideBuiltInWorking(ctx: ExtensionContext): void {
-  (ctx.ui as typeof ctx.ui & { setWorkingVisible?: (visible: boolean) => void }).setWorkingVisible?.(false);
+  // Official API (Pi >= 0.75): an empty frames array hides the built-in working row.
+  ctx.ui.setWorkingIndicator({ frames: [] });
 }
 
 class AmpEditor extends CustomEditor {
