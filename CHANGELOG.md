@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1
+
+- Replace the bundled third-party `pi-tool-display` with self-authored, Amp-style rendering for Pi's built-in tools (read, grep, find, ls, bash, edit, write): compact headers, collapsed output previews, a live bash spinner, and colored edit diffs. Tools we don't override (including MCP tools) keep Pi's default rendering. Drops the `pi-tool-display` dependency and its legacy `@mariozechner` coupling.
+- Collapsed tool output now shows how to expand it — `… (N more lines, ctrl+o to expand)` — matching Pi's built-in renderers (the keybinding follows any user rebinding).
+- Truncation notices match Pi verbatim: warning-colored `[Truncated: …]` / `[First line exceeds … limit]` per tool, and bash's `[Full output: …. Truncated: …]`.
+- The `read` header line range is 1-indexed with an inclusive end (`read file:1-15`), and the `write` result reports the file's total line count.
+- Show context-window usage in the editor top-right: `model · thinking · 45%` (Pi's `getContextUsage().percent`, hidden when usage is unknown).
+
 ## 0.4.0
 
 - Rework the status-bar layout: session cost sits alone on the top-left; the model id and thinking level (effort) are grouped on the top-right (e.g. `sonnet-4 · high`). Cost is always shown, even at `$0.000`.
