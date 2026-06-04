@@ -19,7 +19,7 @@ Set the theme in Pi settings, or in `~/.pi/agent/settings.json`:
 ## Includes
 
 - `amp-dark` and `amp-light` themes (auto-switching to follow the device appearance; set `AMP_APPEARANCE=dark` or `AMP_APPEARANCE=light` to force)
-- Amp-style editor chrome: session cost and thinking level top-right, live working status and `cwd (branch)` on the bottom border
+- Amp-style editor chrome: session cost top-left, model · thinking-level · context-window usage top-right, live working status and `cwd (branch)` on the bottom border
 - Working status integrated into the editor bottom border, with cwd and branch on the right
 - Compact Amp-style user messages with thinking-level color sync
 - Self-authored Amp-style tool rendering for the built-in tools (read, grep, find, ls, bash, edit, write): compact headers, collapsed output previews, a live bash spinner, and colored edit diffs (MCP tools keep Pi's default rendering)

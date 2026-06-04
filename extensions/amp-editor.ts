@@ -70,11 +70,20 @@ export function compactModelId(modelId: string, maxWidth: number): string {
 export function formatStatusTopRight(input: {
   model: string;
   thinking: string;
+  /** Context-window usage as a percentage (Pi's `getContextUsage().percent`); null/omitted hides it. */
+  contextPercent?: number | null;
   fg: (color: ThemeColor, text: string) => string;
 }): string {
-  const thinkingPart = input.fg(thinkingColorFor(input.thinking), input.thinking);
-  if (!input.model) return thinkingPart;
-  return `${input.fg("muted", input.model)} ${input.fg("dim", "·")} ${thinkingPart}`;
+  const dot = input.fg("dim", "·");
+  const parts: string[] = [];
+  if (input.model) {
+    parts.push(input.fg("muted", input.model));
+  }
+  parts.push(input.fg(thinkingColorFor(input.thinking), input.thinking));
+  if (typeof input.contextPercent === "number" && Number.isFinite(input.contextPercent)) {
+    parts.push(input.fg("muted", `${Math.round(input.contextPercent)}%`));
+  }
+  return parts.join(` ${dot} `);
 }
 
 function compactPath(cwd: string): string {
@@ -191,6 +200,7 @@ class AmpEditor extends CustomEditor {
     const rightTop = formatStatusTopRight({
       model: modelId ? compactModelId(modelId, Math.max(8, Math.floor(innerWidth * 0.3))) : "",
       thinking: this.getThinkingLevel(),
+      contextPercent: this.ctx.getContextUsage()?.percent ?? null,
       fg: (c, t) => this.fg(c, t),
     });
 
