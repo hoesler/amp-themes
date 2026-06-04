@@ -24,7 +24,7 @@ import type {
   ToolRenderResultOptions,
   WriteToolInput,
 } from "@earendil-works/pi-coding-agent";
-import { renderDiff } from "@earendil-works/pi-coding-agent";
+import { keyHint, renderDiff } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { Component } from "@earendil-works/pi-tui";
 import { getConfig } from "./amp-tool-config.js";
@@ -41,9 +41,23 @@ import {
   type AmpToolRenderContext,
 } from "./amp-tool-render.js";
 
-/** Append a `… (N more line(s))` hint to `parts` when lines were hidden. */
-function pushMoreHint(parts: string[], remaining: number, theme: RenderTheme): void {
-  const hint = moreHint(remaining, theme);
+/**
+ * Pre-rendered "ctrl+o to expand" hint, resolved from the live keybinding.
+ * Only call inside a render hook (it reads host globals available while the TUI
+ * runs), never at module load.
+ */
+function expandHint(): string {
+  return keyHint("app.tools.expand", "to expand");
+}
+
+/** Append a `… (N more line(s)[, …])` hint to `parts` when lines were hidden. */
+function pushMoreHint(
+  parts: string[],
+  remaining: number,
+  theme: RenderTheme,
+  opts: { total?: number; expandHint?: string } = {},
+): void {
+  const hint = moreHint(remaining, theme, opts);
   if (hint) {
     parts.push(hint);
   }
@@ -74,6 +88,7 @@ export function buildEditResultText(
   hasDiff: boolean,
   options: ToolRenderResultOptions,
   theme: RenderTheme,
+  hint = "",
 ): string {
   const config = getConfig();
   const lines = colored.split("\n");
@@ -87,7 +102,7 @@ export function buildEditResultText(
   } else {
     parts.push(theme.fg("muted", "edit: no changes"));
   }
-  pushMoreHint(parts, remaining, theme);
+  pushMoreHint(parts, remaining, theme, { expandHint: hint });
   return parts.join("\n");
 }
 
@@ -101,7 +116,7 @@ export function renderEditResult(
   // Prefer the tool's display diff; `renderDiff` returns a colored ANSI string
   // and IGNORES its options arg, so we collapse it caller-side (brief R2).
   const colored = hasDiff ? renderDiff(result.details!.diff) : extractTextOutput(result);
-  return new Text(buildEditResultText(colored, hasDiff, options, theme));
+  return new Text(buildEditResultText(colored, hasDiff, options, theme, expandHint()));
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +149,7 @@ export function buildWriteResultText(
   content: string,
   options: ToolRenderResultOptions,
   theme: RenderTheme,
+  hint = "",
 ): string {
   const config = getConfig();
   const lineCount = countLines(content);
@@ -151,7 +167,8 @@ export function buildWriteResultText(
   if (shown.length > 0) {
     parts.push(theme.fg("toolOutput", shown.join("\n")));
   }
-  pushMoreHint(parts, remaining, theme);
+  // Mirror Pi's write hint, which also reports the file's total line count.
+  pushMoreHint(parts, remaining, theme, { total: lines.length, expandHint: hint });
   return parts.join("\n");
 }
 
@@ -168,5 +185,5 @@ export function renderWriteResult(
     typeof args.content === "string" && args.content.length > 0
       ? args.content
       : extractTextOutput(result);
-  return new Text(buildWriteResultText(args.path ?? "", content, options, theme));
+  return new Text(buildWriteResultText(args.path ?? "", content, options, theme, expandHint()));
 }

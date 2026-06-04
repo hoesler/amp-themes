@@ -107,6 +107,7 @@ describe("buildWriteResultText", () => {
     expect(out).toContain("row 1");
     expect(out).toContain("row 8");
     expect(out).not.toContain("row 9");
-    expect(out).toContain("(4 more lines)");
+    // write mirrors Pi's hint, which also reports the file's total line count.
+    expect(out).toContain("(4 more lines, 12 total)");
   });
 });

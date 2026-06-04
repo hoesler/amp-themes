@@ -20,6 +20,7 @@ import type {
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
+import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { Component } from "@earendil-works/pi-tui";
 import { getConfig } from "./amp-tool-config.js";
@@ -27,6 +28,7 @@ import {
   buildHeaderLine,
   collapseForPreview,
   extractTextOutput,
+  formatReadRange,
   moreHint,
   shortenPath,
   splitLines,
@@ -36,8 +38,18 @@ import {
 } from "./amp-tool-render.js";
 
 /**
+ * Pre-rendered "ctrl+o to expand" hint, resolved from the live keybinding so it
+ * follows any user rebinding. Only call inside a render hook (it reads host
+ * globals that exist while the TUI is running), never at module load.
+ */
+function expandHint(): string {
+  return keyHint("app.tools.expand", "to expand");
+}
+
+/**
  * Shared result body: header verb, the output preview honouring expansion, a
- * `… (N more lines)` hint when collapsed, and an optional truncation hint.
+ * `… (N more lines, ctrl+o to expand)` hint when collapsed, and an optional
+ * truncation hint.
  */
 function buildResultText(
   verb: string,
@@ -54,7 +66,7 @@ function buildResultText(
   if (shown.length > 0) {
     parts.push(theme.fg("toolOutput", shown.join("\n")));
   }
-  const hint = moreHint(remaining, theme);
+  const hint = moreHint(remaining, theme, { expandHint: expandHint() });
   if (hint) {
     parts.push(hint);
   }
@@ -77,13 +89,7 @@ export function renderReadCall(
   _context: AmpToolRenderContext,
 ): Component {
   const path = shortenPath(args.path);
-  let range = "";
-  if (typeof args.offset === "number" || typeof args.limit === "number") {
-    const from = typeof args.offset === "number" ? args.offset : 0;
-    const to =
-      typeof args.limit === "number" ? from + args.limit : undefined;
-    range = to !== undefined ? `:${from}-${to}` : `:${from}-`;
-  }
+  const range = formatReadRange(args.offset, args.limit);
   const verbPart = buildHeaderLine(verbFor("read"), path, "", theme);
   const text = range ? `${verbPart}${theme.fg("warning", range)}` : verbPart;
   return new Text(text);
@@ -95,7 +101,7 @@ export function renderReadResult(
   theme: Theme,
   _context: AmpToolRenderContext,
 ): Component {
-  const truncation = truncationHint(result.details ?? undefined, theme);
+  const truncation = truncationHint("read", result.details ?? undefined, theme);
   return new Text(buildResultText("read", extractTextOutput(result), options, theme, truncation));
 }
 
@@ -126,7 +132,7 @@ export function renderGrepResult(
   theme: Theme,
   _context: AmpToolRenderContext,
 ): Component {
-  const truncation = truncationHint(result.details ?? undefined, theme);
+  const truncation = truncationHint("grep", result.details ?? undefined, theme);
   return new Text(buildResultText("grep", extractTextOutput(result), options, theme, truncation));
 }
 
@@ -154,7 +160,7 @@ export function renderFindResult(
   theme: Theme,
   _context: AmpToolRenderContext,
 ): Component {
-  const truncation = truncationHint(result.details ?? undefined, theme);
+  const truncation = truncationHint("find", result.details ?? undefined, theme);
   return new Text(buildResultText("find", extractTextOutput(result), options, theme, truncation));
 }
 
@@ -182,6 +188,6 @@ export function renderLsResult(
   theme: Theme,
   _context: AmpToolRenderContext,
 ): Component {
-  const truncation = truncationHint(result.details ?? undefined, theme);
+  const truncation = truncationHint("ls", result.details ?? undefined, theme);
   return new Text(buildResultText("ls", extractTextOutput(result), options, theme, truncation));
 }

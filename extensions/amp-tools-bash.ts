@@ -6,7 +6,8 @@
  *   spinner timer lives on `context.state` and is driven by `context.invalidate`.
  * - `renderBashResult`: a status icon (✓/✗ from `context.isError`), the command
  *   output preview read from `result.content` (NOT details, per C2), and an
- *   optional `full output at <path>` hint from `details.fullOutputPath`.
+ *   optional warning-colored `[Full output: …. Truncated: …]` hint built from
+ *   `details.fullOutputPath`/`details.truncation` (mirrors Pi's bash renderer).
  */
 import type {
   AgentToolResult,
@@ -15,18 +16,19 @@ import type {
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
+import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { Component } from "@earendil-works/pi-tui";
 import { getConfig } from "./amp-tool-config.js";
 import {
   BASH_SPINNER_FRAMES,
   BASH_SPINNER_INTERVAL_MS,
+  bashTruncationHint,
   collapseForPreview,
   extractTextOutput,
   formatElapsed,
   getOrCreateSpinnerState,
   moreHint,
-  shortenPath,
   splitLines,
   statusColor,
   statusIcon,
@@ -130,13 +132,15 @@ export function renderBashResult(
   } else {
     parts.push(`${icon} ${theme.fg("muted", context.isError ? "command failed" : "no output")}`);
   }
-  const hint = moreHint(remaining, theme);
+  const hint = moreHint(remaining, theme, {
+    expandHint: keyHint("app.tools.expand", "to expand"),
+  });
   if (hint) {
     parts.push(hint);
   }
-  const fullOutputPath = result.details?.fullOutputPath;
-  if (fullOutputPath) {
-    parts.push(theme.fg("muted", `full output at ${shortenPath(fullOutputPath)}`));
+  const truncation = bashTruncationHint(result.details ?? undefined, theme);
+  if (truncation) {
+    parts.push(truncation);
   }
   return new Text(parts.join("\n"));
 }

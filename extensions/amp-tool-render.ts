@@ -180,12 +180,51 @@ export function collapseForPreview(
 /**
  * Build the muted `… (N more line(s))` hint shown when a preview was collapsed,
  * or an empty string when nothing was hidden (`remaining === 0`).
+ *
+ * `opts.total` appends a `, <N> total` segment (used by `write`, mirroring Pi).
+ * `opts.expandHint` appends a pre-rendered keybinding hint (e.g. the output of
+ * `keyHint("app.tools.expand", "to expand")`) so the collapsed row tells the
+ * user how to expand it — matching Pi's built-in renderers. The hint string is
+ * supplied by the caller (the renderer layer) rather than built here, keeping
+ * this module free of any `pi-coding-agent` import and trivially testable.
  */
-export function moreHint(remaining: number, theme: RenderTheme): string {
+export function moreHint(
+  remaining: number,
+  theme: RenderTheme,
+  opts: { total?: number; expandHint?: string } = {},
+): string {
   if (remaining <= 0) {
     return "";
   }
-  return theme.fg("muted", `… (${remaining} more line${remaining === 1 ? "" : "s"})`);
+  let inner = `${remaining} more line${remaining === 1 ? "" : "s"}`;
+  if (typeof opts.total === "number") {
+    inner += `, ${opts.total} total`;
+  }
+  if (opts.expandHint) {
+    return `${theme.fg("muted", `… (${inner},`)} ${opts.expandHint}${theme.fg("muted", ")")}`;
+  }
+  return theme.fg("muted", `… (${inner})`);
+}
+
+/**
+ * Format the `:from-to` line-range suffix for a read-tool header, mirroring
+ * Pi's built-in read renderer exactly: `offset` is 1-indexed (default 1), the
+ * end line is inclusive (`from + limit - 1`), and an open-ended read (a `limit`
+ * with no explicit end) shows just `:from` with no trailing dash. Returns ""
+ * when neither bound is set (a whole-file read shows no range).
+ */
+export function formatReadRange(
+  offset: number | undefined,
+  limit: number | undefined,
+): string {
+  if (typeof offset !== "number" && typeof limit !== "number") {
+    return "";
+  }
+  const from = typeof offset === "number" ? offset : 1;
+  if (typeof limit === "number") {
+    return `:${from}-${from + limit - 1}`;
+  }
+  return `:${from}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -229,39 +268,135 @@ export function buildHeaderLine(
 // Truncation hint
 // ---------------------------------------------------------------------------
 
-/** Shape of the details object various read-only tools attach for truncation. */
+/**
+ * Pi's default truncation limits, mirrored here as local constants. Pi's own
+ * `TruncationResult` always carries the concrete `maxBytes`/`maxLines` that were
+ * applied, so these only back the `?? DEFAULT` fallbacks (rarely hit). Kept in
+ * sync with `pi-coding-agent`'s `truncate.ts` (50KB / 2000 lines).
+ */
+const DEFAULT_MAX_BYTES = 50 * 1024;
+const DEFAULT_MAX_LINES = 2000;
+
+/**
+ * Format a byte count exactly like Pi's `formatSize` (`NB` / `N.NKB` / `N.NMB`).
+ * Re-implemented locally rather than imported so this module stays free of any
+ * `pi-coding-agent` dependency and unit-testable in isolation.
+ */
+export function formatSize(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes}B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)}KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+/** Per-tool truncation metadata a result may attach (superset across tools). */
 interface TruncatableDetails {
-  truncation?: { truncated?: boolean };
+  truncation?: {
+    truncated?: boolean;
+    truncatedBy?: "lines" | "bytes" | null;
+    totalLines?: number;
+    outputLines?: number;
+    firstLineExceedsLimit?: boolean;
+    maxLines?: number;
+    maxBytes?: number;
+  };
   matchLimitReached?: number;
   resultLimitReached?: number;
   entryLimitReached?: number;
+  linesTruncated?: boolean;
 }
 
+/** Tools whose truncation wording differs; selects the matching format. */
+export type TruncatableKind = "read" | "ls" | "grep" | "find";
+
 /**
- * Derive a short muted "truncated/limit reached" hint from a tool's details,
- * or an empty string when nothing was truncated.
+ * Build the warning-colored `[Truncated: …]` hint for a read-only tool result,
+ * mirroring Pi's built-in renderers verbatim (per-tool wording differs), or an
+ * empty string when nothing was truncated.
  */
 export function truncationHint(
+  kind: TruncatableKind,
   details: TruncatableDetails | undefined | null,
   theme: RenderTheme,
 ): string {
   if (!details) {
     return "";
   }
-  let message: string | undefined;
-  if (typeof details.matchLimitReached === "number") {
-    message = `match limit reached (${details.matchLimitReached})`;
-  } else if (typeof details.resultLimitReached === "number") {
-    message = `result limit reached (${details.resultLimitReached})`;
-  } else if (typeof details.entryLimitReached === "number") {
-    message = `entry limit reached (${details.entryLimitReached})`;
-  } else if (details.truncation?.truncated) {
-    message = "output truncated";
+  const t = details.truncation;
+  const byteLimit = (): string => `${formatSize(t?.maxBytes ?? DEFAULT_MAX_BYTES)} limit`;
+  let message = "";
+
+  if (kind === "read") {
+    if (t?.truncated) {
+      if (t.firstLineExceedsLimit) {
+        message = `[First line exceeds ${formatSize(t.maxBytes ?? DEFAULT_MAX_BYTES)} limit]`;
+      } else if (t.truncatedBy === "lines") {
+        message = `[Truncated: showing ${t.outputLines} of ${t.totalLines} lines (${t.maxLines ?? DEFAULT_MAX_LINES} line limit)]`;
+      } else {
+        message = `[Truncated: ${t.outputLines} lines shown (${byteLimit()})]`;
+      }
+    }
+  } else {
+    const warnings: string[] = [];
+    if (kind === "ls" && typeof details.entryLimitReached === "number") {
+      warnings.push(`${details.entryLimitReached} entries limit`);
+    }
+    if (kind === "grep" && typeof details.matchLimitReached === "number") {
+      warnings.push(`${details.matchLimitReached} matches limit`);
+    }
+    if (kind === "find" && typeof details.resultLimitReached === "number") {
+      warnings.push(`${details.resultLimitReached} results limit`);
+    }
+    if (t?.truncated) {
+      warnings.push(byteLimit());
+    }
+    if (kind === "grep" && details.linesTruncated) {
+      warnings.push("some lines truncated");
+    }
+    if (warnings.length > 0) {
+      message = `[Truncated: ${warnings.join(", ")}]`;
+    }
   }
-  if (!message) {
+
+  return message ? theme.fg("warning", message) : "";
+}
+
+/** Bash result truncation metadata: a truncation record plus a spill-file path. */
+interface BashTruncatableDetails {
+  truncation?: TruncatableDetails["truncation"];
+  fullOutputPath?: string;
+}
+
+/**
+ * Build bash's warning-colored `[Full output: …. Truncated: …]` hint, mirroring
+ * Pi's bash renderer: the spill-file note and the truncation note are joined by
+ * ". " inside a single bracket. The spill path is shortened to `~` for display.
+ * Returns "" when the output was neither truncated nor spilled to a file.
+ */
+export function bashTruncationHint(
+  details: BashTruncatableDetails | undefined | null,
+  theme: RenderTheme,
+): string {
+  const t = details?.truncation;
+  const fullOutputPath = details?.fullOutputPath;
+  if (!t?.truncated && !fullOutputPath) {
     return "";
   }
-  return theme.fg("muted", message);
+  const warnings: string[] = [];
+  if (fullOutputPath) {
+    warnings.push(`Full output: ${shortenPath(fullOutputPath)}`);
+  }
+  if (t?.truncated) {
+    warnings.push(
+      t.truncatedBy === "lines"
+        ? `Truncated: showing ${t.outputLines} of ${t.totalLines} lines`
+        : `Truncated: ${t.outputLines} lines shown (${formatSize(t.maxBytes ?? DEFAULT_MAX_BYTES)} limit)`,
+    );
+  }
+  return theme.fg("warning", `[${warnings.join(". ")}]`);
 }
 
 // ---------------------------------------------------------------------------

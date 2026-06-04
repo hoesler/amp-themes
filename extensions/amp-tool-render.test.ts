@@ -3,10 +3,13 @@ import { describe, expect, test } from "vitest";
 import {
   BASH_SPINNER_FRAMES,
   BASH_SPINNER_INTERVAL_MS,
+  bashTruncationHint,
   buildHeaderLine,
   collapseForPreview,
   extractTextOutput,
   formatElapsed,
+  formatReadRange,
+  formatSize,
   getExpandedPreviewLineLimit,
   getOrCreateSpinnerState,
   moreHint,
@@ -171,6 +174,46 @@ describe("moreHint", () => {
     expect(moreHint(0, theme)).toBe("");
     expect(moreHint(-2, theme)).toBe("");
   });
+
+  test("appends a total segment when given", () => {
+    expect(moreHint(4, theme, { total: 12 })).toBe("<muted>… (4 more lines, 12 total)</muted>");
+  });
+
+  test("appends a pre-rendered expand hint outside the muted wrap", () => {
+    expect(moreHint(3, theme, { expandHint: "<dim>ctrl+o</dim> to expand" })).toBe(
+      "<muted>… (3 more lines,</muted> <dim>ctrl+o</dim> to expand<muted>)</muted>",
+    );
+  });
+
+  test("combines total and expand hint", () => {
+    expect(moreHint(4, theme, { total: 12, expandHint: "X" })).toBe(
+      "<muted>… (4 more lines, 12 total,</muted> X<muted>)</muted>",
+    );
+  });
+
+  test("no hint emitted when nothing hidden, even with opts", () => {
+    expect(moreHint(0, theme, { total: 9, expandHint: "X" })).toBe("");
+  });
+});
+
+describe("formatReadRange", () => {
+  test("whole-file read (no bounds) shows no range", () => {
+    expect(formatReadRange(undefined, undefined)).toBe("");
+  });
+
+  test("offset is 1-indexed and the end line is inclusive", () => {
+    // Pi reads 15 lines from line 1 -> lines 1..15, not 1..16.
+    expect(formatReadRange(1, 15)).toBe(":1-15");
+    expect(formatReadRange(11, 15)).toBe(":11-25");
+  });
+
+  test("offset defaults to 1 when only a limit is given", () => {
+    expect(formatReadRange(undefined, 20)).toBe(":1-20");
+  });
+
+  test("open-ended read (offset, no limit) shows a bare line with no trailing dash", () => {
+    expect(formatReadRange(40, undefined)).toBe(":40");
+  });
 });
 
 describe("verb map", () => {
@@ -197,26 +240,94 @@ describe("buildHeaderLine", () => {
   });
 });
 
-describe("truncationHint", () => {
-  test("reports grep match limit", () => {
-    expect(truncationHint({ matchLimitReached: 50 }, theme)).toBe("<muted>match limit reached (50)</muted>");
+describe("formatSize", () => {
+  test("bytes, KB, and MB thresholds match Pi", () => {
+    expect(formatSize(512)).toBe("512B");
+    expect(formatSize(50 * 1024)).toBe("50.0KB");
+    expect(formatSize(1024 * 1024)).toBe("1.0MB");
+  });
+});
+
+describe("truncationHint (Pi-aligned wording)", () => {
+  test("grep: matches limit, byte limit, and partial-line note join", () => {
+    expect(
+      truncationHint(
+        "grep",
+        { matchLimitReached: 50, truncation: { truncated: true, maxBytes: 50 * 1024 }, linesTruncated: true },
+        theme,
+      ),
+    ).toBe("<warning>[Truncated: 50 matches limit, 50.0KB limit, some lines truncated]</warning>");
   });
 
-  test("reports find result limit", () => {
-    expect(truncationHint({ resultLimitReached: 100 }, theme)).toBe("<muted>result limit reached (100)</muted>");
+  test("find: results limit only", () => {
+    expect(truncationHint("find", { resultLimitReached: 100 }, theme)).toBe(
+      "<warning>[Truncated: 100 results limit]</warning>",
+    );
   });
 
-  test("reports ls entry limit", () => {
-    expect(truncationHint({ entryLimitReached: 200 }, theme)).toBe("<muted>entry limit reached (200)</muted>");
+  test("ls: entries limit only", () => {
+    expect(truncationHint("ls", { entryLimitReached: 200 }, theme)).toBe(
+      "<warning>[Truncated: 200 entries limit]</warning>",
+    );
   });
 
-  test("reports generic output truncation", () => {
-    expect(truncationHint({ truncation: { truncated: true } }, theme)).toBe("<muted>output truncated</muted>");
+  test("read: line-limit truncation reports shown/total and the line cap", () => {
+    expect(
+      truncationHint(
+        "read",
+        { truncation: { truncated: true, truncatedBy: "lines", outputLines: 2000, totalLines: 5000, maxLines: 2000 } },
+        theme,
+      ),
+    ).toBe("<warning>[Truncated: showing 2000 of 5000 lines (2000 line limit)]</warning>");
+  });
+
+  test("read: byte-limit truncation reports lines shown and the size cap", () => {
+    expect(
+      truncationHint(
+        "read",
+        { truncation: { truncated: true, truncatedBy: "bytes", outputLines: 30, maxBytes: 50 * 1024 } },
+        theme,
+      ),
+    ).toBe("<warning>[Truncated: 30 lines shown (50.0KB limit)]</warning>");
+  });
+
+  test("read: a first line over the byte limit is called out", () => {
+    expect(
+      truncationHint("read", { truncation: { truncated: true, firstLineExceedsLimit: true, maxBytes: 50 * 1024 } }, theme),
+    ).toBe("<warning>[First line exceeds 50.0KB limit]</warning>");
   });
 
   test("returns empty string when nothing was truncated", () => {
-    expect(truncationHint(undefined, theme)).toBe("");
-    expect(truncationHint({ truncation: { truncated: false } }, theme)).toBe("");
+    expect(truncationHint("read", undefined, theme)).toBe("");
+    expect(truncationHint("ls", { truncation: { truncated: false } }, theme)).toBe("");
+    expect(truncationHint("find", {}, theme)).toBe("");
+  });
+});
+
+describe("bashTruncationHint", () => {
+  test("joins the spill-file note and the truncation note with '. '", () => {
+    expect(
+      bashTruncationHint(
+        { fullOutputPath: "/tmp/out.txt", truncation: { truncated: true, truncatedBy: "lines", outputLines: 10, totalLines: 99 } },
+        theme,
+      ),
+    ).toBe("<warning>[Full output: /tmp/out.txt. Truncated: showing 10 of 99 lines]</warning>");
+  });
+
+  test("spill-file path is shortened to ~", () => {
+    const out = bashTruncationHint({ fullOutputPath: `${homedir()}/x/out.txt` }, theme);
+    expect(out).toBe("<warning>[Full output: ~/x/out.txt]</warning>");
+  });
+
+  test("byte-limit truncation reports the size cap", () => {
+    expect(
+      bashTruncationHint({ truncation: { truncated: true, truncatedBy: "bytes", outputLines: 5, maxBytes: 50 * 1024 } }, theme),
+    ).toBe("<warning>[Truncated: 5 lines shown (50.0KB limit)]</warning>");
+  });
+
+  test("returns empty string when neither truncated nor spilled", () => {
+    expect(bashTruncationHint(undefined, theme)).toBe("");
+    expect(bashTruncationHint({ truncation: { truncated: false } }, theme)).toBe("");
   });
 });
 
