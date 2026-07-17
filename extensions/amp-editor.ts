@@ -1,6 +1,7 @@
 import { CustomEditor, type ExtensionAPI, type ExtensionContext, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { BUILTIN_COMMAND_PALETTE_ITEMS, CommandPaletteOverlay, type CommandPaletteItem, type CommandPaletteResult, stripAnsi } from "./amp-command-palette.js";
+import { collectAmpEditorStatusLabel } from "./amp-editor-status-hooks.js";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { relative } from "node:path";
@@ -241,11 +242,14 @@ class AmpEditor extends CustomEditor {
   private getModelLabel(maxWidth: number): string {
     const modelId = this.ctx.model?.id ?? "model unknown";
     const thinkingLevel = this.getThinkingLevel();
+    const modeLabel = collectAmpEditorStatusLabel();
+    const modePrefixWidth = modeLabel ? visibleWidth(modeLabel) + 3 : 0;
     const thinkingWidth = visibleWidth(thinkingLevel);
-    const modelWidth = Math.max(1, maxWidth - thinkingWidth - 3);
+    const modelWidth = Math.max(1, maxWidth - thinkingWidth - modePrefixWidth - 3);
     const model = this.fg("text", compactModelId(modelId, modelWidth));
     const thinking = this.fg(this.getThinkingColor(), thinkingLevel);
-    return ` ${model} ${this.fg("dim", "·")} ${thinking} `;
+    const modePrefix = modeLabel ? `${this.fg("accent", modeLabel)} ${this.fg("dim", "·")} ` : "";
+    return ` ${modePrefix}${model} ${this.fg("dim", "·")} ${thinking} `;
   }
 
   private getThinkingColor(): ThemeColor {
