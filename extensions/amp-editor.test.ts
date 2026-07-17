@@ -27,3 +27,13 @@ test("hides the percent when usage is unknown (null/undefined)", () => {
   expect(formatStatusTopRight({ model: "sonnet-4", thinking: "high", fg: (_c, t) => t }))
     .toBe("sonnet-4 · high");
 });
+
+test("prepends a third-party status label before the model", () => {
+  expect(formatStatusTopRight({ model: "sonnet-4", thinking: "high", statusLabel: "mode:high", fg: (_c, t) => t }))
+    .toBe("mode:high · sonnet-4 · high");
+});
+
+test("ignores an empty status label", () => {
+  expect(formatStatusTopRight({ model: "sonnet-4", thinking: "high", statusLabel: "", fg: (_c, t) => t }))
+    .toBe("sonnet-4 · high");
+});

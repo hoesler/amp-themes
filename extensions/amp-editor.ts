@@ -1,6 +1,7 @@
 import { CustomEditor, type ExtensionAPI, type ExtensionContext, type ThemeColor } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { BUILTIN_COMMAND_PALETTE_ITEMS, CommandPaletteOverlay, type CommandPaletteItem, type CommandPaletteResult, stripAnsi } from "./amp-command-palette.js";
+import { collectAmpEditorStatusLabel } from "./amp-editor-status-hooks.js";
 import { thinkingColorFor } from "./amp-thinking.js";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
@@ -70,12 +71,17 @@ export function compactModelId(modelId: string, maxWidth: number): string {
 export function formatStatusTopRight(input: {
   model: string;
   thinking: string;
+  /** Label contributed by third-party extensions via the status-hook contract; empty hides it. */
+  statusLabel?: string;
   /** Context-window usage as a percentage (Pi's `getContextUsage().percent`); null/omitted hides it. */
   contextPercent?: number | null;
   fg: (color: ThemeColor, text: string) => string;
 }): string {
   const dot = input.fg("dim", "·");
   const parts: string[] = [];
+  if (input.statusLabel) {
+    parts.push(input.fg("accent", input.statusLabel));
+  }
   if (input.model) {
     parts.push(input.fg("muted", input.model));
   }
@@ -197,8 +203,11 @@ class AmpEditor extends CustomEditor {
 
     const modelId = this.ctx.model?.id ?? "";
     const leftTop = formatCost(getSessionCost(this.ctx));
+    const statusLabel = collectAmpEditorStatusLabel();
+    const modelBudget = Math.max(8, Math.floor(innerWidth * 0.3) - (statusLabel ? visibleWidth(statusLabel) + 3 : 0));
     const rightTop = formatStatusTopRight({
-      model: modelId ? compactModelId(modelId, Math.max(8, Math.floor(innerWidth * 0.3))) : "",
+      model: modelId ? compactModelId(modelId, modelBudget) : "",
+      statusLabel,
       thinking: this.getThinkingLevel(),
       contextPercent: this.ctx.getContextUsage()?.percent ?? null,
       fg: (c, t) => this.fg(c, t),

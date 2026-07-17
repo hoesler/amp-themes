@@ -24,6 +24,30 @@ Set the theme in Pi settings, or in `~/.pi/agent/settings.json`:
 - Compact Amp-style user messages with thinking-level color sync
 - Self-authored Amp-style tool rendering for the built-in tools (read, grep, find, ls, bash, edit, write): compact headers, collapsed output previews, a live bash spinner, and colored edit diffs (MCP tools keep Pi's default rendering)
 
+## Third-party status labels in the model/thinking row
+
+The editor chrome fully replaces Pi's built-in footer, so `ctx.ui.setStatus()` calls from other extensions never render. Instead, any extension can prepend a short label (e.g. a mode/preset name) to the model/thinking indicator via a tiny, dependency-free `globalThis` contract — no import of `amp-themes` required:
+
+```ts
+type AmpEditorStatusHook = () => string | undefined;
+
+function ampEditorStatusHooks(): Set<AmpEditorStatusHook> {
+  const g = globalThis as typeof globalThis & { __ampEditorStatusHooks?: Set<AmpEditorStatusHook> };
+  if (!g.__ampEditorStatusHooks) g.__ampEditorStatusHooks = new Set();
+  return g.__ampEditorStatusHooks;
+}
+
+// Register once, e.g. at the top of your extension's activation function.
+// Return a short label to show, or undefined/"" to contribute nothing right now.
+ampEditorStatusHooks().add(() => "mode:high");
+```
+
+- Every registered hook is called on each render; thrown errors are ignored so a misbehaving hook never breaks the editor.
+- Non-empty results from all registered hooks are joined with " · " and prepended to the existing `model · thinking` text, e.g. `mode:high · claude-sonnet-5 · high`.
+- If no hooks are registered, the row is unchanged from today.
+
+`extensions/amp-editor-status-hooks.ts` exports `registerAmpEditorStatusHook`/`collectAmpEditorStatusLabel` helpers with the exact same shape, purely for convenience — you do not need to depend on this package to use the contract.
+
 ## Development
 
 ```bash
